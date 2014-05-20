@@ -14,7 +14,7 @@ import common.peer.AvailableResources;
 public class Worker extends ComponentDefinition {
 
 	Positive<Timer> timerPort = positive(Timer.class);
-	
+
 	Queue<Task> running = new LinkedList<Task>();
 	Queue<Task> waiting = new LinkedList<Task>();
 	Queue<Task> done = new LinkedList<Task>();
@@ -23,11 +23,10 @@ public class Worker extends ComponentDefinition {
 		subscribe(handleInit, control);
 	}
 
-	 Handler<WorkerInit> handleInit = new Handler<WorkerInit>() {
-		 @Override
-	     public void handle(WorkerInit init) {
-		 }
-	 };
-	 
-	 
+	Handler<WorkerInit> handleInit = new Handler<WorkerInit>() {
+		@Override
+		public void handle(WorkerInit init) {
+		}
+	};
+
 }
