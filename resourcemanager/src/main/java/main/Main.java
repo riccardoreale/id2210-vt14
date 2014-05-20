@@ -9,8 +9,15 @@ public class Main {
 
     public static void main(String[] args) throws Throwable {
         // TODO - change the random seed, have the user pass it in.
+    	
+    	boolean omniscent = false;
+    	if (args.length > 0) {
+    		omniscent = Boolean.parseBoolean(args[0]);
+    	}
+    	System.err.printf("Omniscent: %s\n", omniscent);
+    	
         long seed = System.currentTimeMillis();
-        Configuration configuration = new Configuration(seed);
+        Configuration configuration = new Configuration(seed, omniscent);
 
         Scenario scenario = new Scenario1();
         scenario.setSeed(seed);

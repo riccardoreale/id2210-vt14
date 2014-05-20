@@ -20,6 +20,7 @@ import se.sics.kompics.timer.Timer;
 import system.peer.Peer;
 import system.peer.PeerInit;
 import simulator.snapshot.Snapshot;
+import common.configuration.DataCenterConfiguration;
 import common.configuration.RmConfiguration;
 import common.configuration.Configuration;
 import common.configuration.CyclonConfiguration;
@@ -45,6 +46,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
     private final HashMap<Long, Component> peers;
     private final HashMap<Long, Address> peersAddress;
     private BootstrapConfiguration bootstrapConfiguration;
+    private DataCenterConfiguration dataCenterConfiguration;
     private CyclonConfiguration cyclonConfiguration;
     private RmConfiguration rmConfiguration;
     private TManConfiguration tmanConfiguration;
@@ -76,9 +78,9 @@ public final class DataCenterSimulator extends ComponentDefinition {
             cyclonConfiguration = init.getCyclonConfiguration();
             rmConfiguration = init.getAggregationConfiguration();
             tmanConfiguration = init.getTmanConfiguration();
-            
+            dataCenterConfiguration = init.getDataCenterConfiguration();
             identifierSpaceSize = cyclonConfiguration.getIdentifierSpaceSize();
-
+            
             // generate periodic report
             int snapshotPeriod = Configuration.SNAPSHOT_PERIOD;
             SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(snapshotPeriod, snapshotPeriod);

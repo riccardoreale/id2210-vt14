@@ -1,6 +1,7 @@
 package common.simulation;
 
 import common.configuration.CyclonConfiguration;
+import common.configuration.DataCenterConfiguration;
 import common.configuration.RmConfiguration;
 import common.configuration.TManConfiguration;
 import se.sics.kompics.Init;
@@ -12,16 +13,18 @@ public final class SimulatorInit extends Init {
     private final CyclonConfiguration cyclonConfiguration;
     private final TManConfiguration tmanConfiguration;
     private final RmConfiguration aggregationConfiguration;
-
+    private final DataCenterConfiguration dataCenterConfiguration;
 	
     public SimulatorInit(BootstrapConfiguration bootstrapConfiguration,
             CyclonConfiguration cyclonConfiguration, TManConfiguration tmanConfiguration,
-            RmConfiguration aggregationConfiguration) {
+            RmConfiguration aggregationConfiguration,
+            DataCenterConfiguration dataCenterConfiguration) {
         super();
         this.bootstrapConfiguration = bootstrapConfiguration;
         this.cyclonConfiguration = cyclonConfiguration;
         this.tmanConfiguration = tmanConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
+        this.dataCenterConfiguration = dataCenterConfiguration;
     }
 
     public RmConfiguration getAggregationConfiguration() {
@@ -42,5 +45,9 @@ public final class SimulatorInit extends Init {
     public TManConfiguration getTmanConfiguration() {
         return this.tmanConfiguration;
     }
+
+	public DataCenterConfiguration getDataCenterConfiguration() {
+		return this.dataCenterConfiguration;
+	}
 
 }

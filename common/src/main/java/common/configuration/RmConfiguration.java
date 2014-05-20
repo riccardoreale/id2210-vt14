@@ -14,19 +14,18 @@ public final class RmConfiguration {
     private final int numPartitions;
     private final int maxNumRoutingEntries;
     private final long seed;
+	private final boolean omniscent;
 
-    public RmConfiguration(long seed) {
-        this.period = 2*1000;
-        this.numPartitions = 10;
-        this.maxNumRoutingEntries = 20;
-        this.seed = seed;
+    public RmConfiguration(long seed, boolean omniscent) {
+    	this(2*1000, 10, 20, seed, omniscent);
     }
     
-    public RmConfiguration(long period, int numPartitions, int maxNumRoutingEntries, long seed) {
+    public RmConfiguration(long period, int numPartitions, int maxNumRoutingEntries, long seed, boolean omniscent) {
         this.period = period;
         this.numPartitions = numPartitions;
         this.maxNumRoutingEntries = maxNumRoutingEntries;
         this.seed = seed;
+        this.omniscent = omniscent;
     }
 
     public long getPeriod() {
@@ -51,6 +50,7 @@ public final class RmConfiguration {
         p.setProperty("numPartitions", "" + numPartitions);
         p.setProperty("maxNumRoutingEntries", "" + maxNumRoutingEntries);
         p.setProperty("seed", "" + seed);
+        p.setProperty("omniscent", Boolean.toString(this.omniscent));
 
         Writer writer = new FileWriter(file);
         p.store(writer, "se.sics.kompics.p2p.overlay.application");
@@ -65,7 +65,8 @@ public final class RmConfiguration {
         int numPartitions = Integer.parseInt(p.getProperty("numPartitions"));
         int maxNumRoutingEntries = Integer.parseInt(p.getProperty("maxNumRoutingEntries"));
         long seed = Long.parseLong(p.getProperty("seed"));
+        boolean omniscent = Boolean.parseBoolean(p.getProperty("omniscent"));
 
-        return new RmConfiguration(period, numPartitions, maxNumRoutingEntries, seed);
+        return new RmConfiguration(period, numPartitions, maxNumRoutingEntries, seed, omniscent);
     }
 }
