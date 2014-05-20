@@ -6,12 +6,10 @@ import se.sics.kompics.timer.Timeout;
 
 public class TaskDone extends Timeout {
 
-	public TaskDone(SchedulePeriodicTimeout request) {
+	public final long id;
+	
+	public TaskDone(ScheduleTimeout request, long id) {
 		super(request);
-	}
-
-
-	public TaskDone(ScheduleTimeout request) {
-		super(request);
+		this.id = id;
 	}
 }

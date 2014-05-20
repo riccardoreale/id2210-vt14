@@ -2,7 +2,7 @@ package common.simulation.scenarios;
 
 import common.simulation.PeerFail;
 import common.simulation.PeerJoin;
-import common.simulation.RequestResource;
+import common.simulation.ClientRequestResource;
 import se.sics.kompics.p2p.experiment.dsl.adaptor.Operation;
 import se.sics.kompics.p2p.experiment.dsl.adaptor.Operation1;
 import se.sics.kompics.p2p.experiment.dsl.adaptor.Operation3;
@@ -35,12 +35,12 @@ public class Operations {
         }
     };
 
-    public static Operation4<RequestResource, Long, Long, Long, Long> requestResources() {
-        return new Operation4<RequestResource, Long, Long, Long, Long>() {
+    public static Operation4<ClientRequestResource, Long, Long, Long, Long> requestResources() {
+        return new Operation4<ClientRequestResource, Long, Long, Long, Long>() {
             @Override
-            public RequestResource generate(Long id, Long numCpus, Long memInMbs,
+            public ClientRequestResource generate(Long id, Long numCpus, Long memInMbs,
                     Long timeToHoldResourceInMilliSecs) {
-                return new RequestResource(id, numCpus.intValue(),
+                return new ClientRequestResource(id, numCpus.intValue(),
                         memInMbs.intValue(),
                         timeToHoldResourceInMilliSecs.intValue());
             }

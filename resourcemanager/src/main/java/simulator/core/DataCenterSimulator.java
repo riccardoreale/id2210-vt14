@@ -29,7 +29,7 @@ import common.simulation.ConsistentHashtable;
 import common.simulation.GenerateReport;
 import common.simulation.PeerFail;
 import common.simulation.PeerJoin;
-import common.simulation.RequestResource;
+import common.simulation.ClientRequestResource;
 import common.simulation.SimulatorInit;
 import java.net.InetAddress;
 import java.util.Random;
@@ -88,9 +88,9 @@ public final class DataCenterSimulator extends ComponentDefinition {
         }
     };
         
-    Handler<RequestResource> handleRequestResource = new Handler<RequestResource>() {
+    Handler<ClientRequestResource> handleRequestResource = new Handler<ClientRequestResource>() {
         @Override
-        public void handle(RequestResource event) {
+        public void handle(ClientRequestResource event) {
             Long successor = ringNodes.getNode(event.getId());
             Component peer = peers.get(successor);
             trigger( event, peer.getNegative(RmPort.class));

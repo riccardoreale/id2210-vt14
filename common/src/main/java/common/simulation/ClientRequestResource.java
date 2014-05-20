@@ -2,14 +2,14 @@ package common.simulation;
 
 import se.sics.kompics.Event;
 
-public final class RequestResource extends Event {
+public final class ClientRequestResource extends Event {
     
     private final long id;
     private final int numCpus;
     private final int memoryInMbs;
     private final int timeToHoldResource;
 
-    public RequestResource(long id, int numCpus, int memoryInMbs, int timeToHoldResource) {
+    public ClientRequestResource(long id, int numCpus, int memoryInMbs, int timeToHoldResource) {
         this.id = id;
         this.numCpus = numCpus;
         this.memoryInMbs = memoryInMbs;

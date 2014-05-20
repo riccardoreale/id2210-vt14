@@ -2,7 +2,7 @@ package resourcemanager.system.peer.rm;
 
 import common.configuration.RmConfiguration;
 import common.peer.AvailableResources;
-import common.simulation.RequestResource;
+import common.simulation.ClientRequestResource;
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
 import cyclon.system.peer.cyclon.PeerDescriptor;
@@ -16,8 +16,9 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import resourcemanager.system.peer.rm.task.Worker;
+import resourcemanager.system.peer.rm.task.RmWorker;
 import resourcemanager.system.peer.rm.task.WorkerInit;
+import resourcemanager.system.peer.rm.task.WorkerPort;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -77,7 +78,7 @@ public final class ResourceManager extends ComponentDefinition {
         subscribe(handleResourceAllocationResponse, networkPort);
         subscribe(handleTManSample, tmanPort);
         
-        worker = create(Worker.class);
+        worker = create(RmWorker.class);
         connect(timerPort, worker.getNegative(Timer.class));
     }
 	
@@ -115,15 +116,6 @@ public final class ResourceManager extends ComponentDefinition {
         }
     };
     
-    Handler<AllocateResources> handleAllocateResources = new Handler<AllocateResources>() {
-        @Override
-        public void handle(AllocateResources event) {
-        	
-        	
-        	
-        }
-    };
-
     Handler<RequestResources.Request> handleResourceAllocationRequest = new Handler<RequestResources.Request>() {
         @Override
         public void handle(RequestResources.Request event) {
@@ -151,9 +143,9 @@ public final class ResourceManager extends ComponentDefinition {
         }
     };
 	
-    Handler<RequestResource> handleRequestResource = new Handler<RequestResource>() {
+    Handler<ClientRequestResource> handleRequestResource = new Handler<ClientRequestResource>() {
         @Override
-        public void handle(RequestResource event) {
+        public void handle(ClientRequestResource event) {
             
             System.out.println(self.getIp() + " allocating resources: " + event.getNumCpus() + " + " + event.getMemoryInMbs());
             // TODO: Ask for resources from neighbours
@@ -162,7 +154,7 @@ public final class ResourceManager extends ComponentDefinition {
             //		event.getNumCpus(), event.getMemoryInMbs());
             //trigger(req, networkPort);
             
-//           trigger(new AllocateResources(event.getId(), event.getNumCpus(), event.getMemoryInMbs(), event.getTimeToHoldResource()));
+            trigger(new AllocateResources(event.getId(), event.getNumCpus(), event.getMemoryInMbs(), event.getTimeToHoldResource()), worker.getNegative(WorkerPort.class));
         }
     };
     
