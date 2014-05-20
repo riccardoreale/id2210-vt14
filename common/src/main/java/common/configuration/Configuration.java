@@ -2,6 +2,7 @@ package common.configuration;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -18,6 +19,7 @@ public class Configuration {
         try {
             ip = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
+        	ip = Inet4Address.getByAddress(new byte[] {127,0,0,1});
         }
     }
     int webPort = 8080;
