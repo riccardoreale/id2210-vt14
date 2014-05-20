@@ -16,6 +16,9 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import resourcemanager.system.peer.rm.task.Worker;
+import resourcemanager.system.peer.rm.task.WorkerInit;
+import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -47,7 +50,9 @@ public final class ResourceManager extends ComponentDefinition {
     private Address self;
     private RmConfiguration configuration;
     Random random;
-    private AvailableResources availableResources;
+//    private AvailableResources availableResources;
+    private Component worker;
+//    private TaskQueue queue;
     // When you partition the index you need to find new nodes
     // This is a routing table maintaining a list of pairs in each partition.
     private Map<Integer, List<PeerDescriptor>> routingTable;
@@ -61,7 +66,6 @@ public final class ResourceManager extends ComponentDefinition {
             }
         }
     };
-
 	
     public ResourceManager() {
 
@@ -72,26 +76,30 @@ public final class ResourceManager extends ComponentDefinition {
         subscribe(handleResourceAllocationRequest, networkPort);
         subscribe(handleResourceAllocationResponse, networkPort);
         subscribe(handleTManSample, tmanPort);
+        
+        worker = create(Worker.class);
+        connect(timerPort, worker.getNegative(Timer.class));
     }
 	
     Handler<RmInit> handleInit = new Handler<RmInit>() {
         @Override
         public void handle(RmInit init) {
+        	
             self = init.getSelf();
             configuration = init.getConfiguration();
             routingTable = new HashMap<Integer, List<PeerDescriptor>>(configuration.getNumPartitions());
             random = new Random(init.getConfiguration().getSeed());
-            availableResources = init.getAvailableResources();
             long period = configuration.getPeriod();
-            availableResources = init.getAvailableResources();
+            
             SchedulePeriodicTimeout rst = new SchedulePeriodicTimeout(period, period);
             rst.setTimeoutEvent(new UpdateTimeout(rst));
             trigger(rst, timerPort);
-
+            
+            trigger(new WorkerInit(self, init.getAvailableResources()),
+            	worker.getControl());
 
         }
     };
-
 
     Handler<UpdateTimeout> handleUpdateTimeout = new Handler<UpdateTimeout>() {
         @Override
@@ -105,27 +113,37 @@ public final class ResourceManager extends ComponentDefinition {
             }
             Address dest = neighbours.get(random.nextInt(neighbours.size()));
 
-
         }
     };
-
+    
+    Handler<AllocateResources> handleAllocateResources = new Handler<AllocateResources>() {
+        @Override
+        public void handle(AllocateResources event) {
+        	
+        	
+        	
+        }
+    };
 
     Handler<RequestResources.Request> handleResourceAllocationRequest = new Handler<RequestResources.Request>() {
         @Override
         public void handle(RequestResources.Request event) {
-            // TODO 
+        	System.out.println(self.getIp() + " - GOT RequestResources.Request");
+        	
         }
     };
+    
     Handler<RequestResources.Response> handleResourceAllocationResponse = new Handler<RequestResources.Response>() {
         @Override
         public void handle(RequestResources.Response event) {
             // TODO 
         }
     };
+    
     Handler<CyclonSample> handleCyclonSample = new Handler<CyclonSample>() {
         @Override
         public void handle(CyclonSample event) {
-            System.out.println("Received samples: " + event.getSample().size());
+            System.out.println(self.getIp() + " - received samples: " + event.getSample().size());
             
             // receive a new list of neighbours
             neighbours.clear();
@@ -156,14 +174,17 @@ public final class ResourceManager extends ComponentDefinition {
         @Override
         public void handle(RequestResource event) {
             
-            System.out.println("Allocate resources: " + event.getNumCpus() + " + " + event.getMemoryInMbs());
+            System.out.println(self.getIp() + " allocating resources: " + event.getNumCpus() + " + " + event.getMemoryInMbs());
             // TODO: Ask for resources from neighbours
             // by sending a ResourceRequest
-//            RequestResources.Request req = new RequestResources.Request(self, dest,
-//            event.getNumCpus(), event.getAmountMem());
-//            trigger(req, networkPort);
+            //RequestResources.Request req = new RequestResources.Request(self, self,
+            //		event.getNumCpus(), event.getMemoryInMbs());
+            //trigger(req, networkPort);
+            
+//           trigger(new AllocateResources(event.getId(), event.getNumCpus(), event.getMemoryInMbs(), event.getTimeToHoldResource()));
         }
     };
+    
     Handler<TManSample> handleTManSample = new Handler<TManSample>() {
         @Override
         public void handle(TManSample event) {

@@ -1,6 +1,5 @@
 package resourcemanager.system.peer.rm;
 
-import java.util.List;
 import se.sics.kompics.address.Address;
 import se.sics.kompics.network.Message;
 import se.sics.kompics.timer.ScheduleTimeout;
