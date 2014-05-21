@@ -13,15 +13,26 @@ public class AvailableResources {
 
     private volatile int numFreeCpus;
     private volatile int freeMemInMbs;
+    
+    /* Hacky way of knowing the queue length. This is used for the omniscent
+    * scheduler. Just pretend it's not here... */
+    private volatile int queueLength;
 
     public AvailableResources(int numFreeCpus, int freeMemInMbs) {
         this.numFreeCpus = numFreeCpus;
         this.freeMemInMbs = freeMemInMbs;
+        this.queueLength = 0;
+    }
+    
+    public synchronized void setQueueLength (int queueLenght) {
+    	this.queueLength = queueLenght;
     }
 
-    
+    public int getQueueLength() {
+		return queueLength;
+	}
 
-    public synchronized boolean isAvailable(int numCpus, int memInMbs) {
+	public synchronized boolean isAvailable(int numCpus, int memInMbs) {
         if (numFreeCpus >= numCpus && freeMemInMbs >= memInMbs) {
             return true;
         }

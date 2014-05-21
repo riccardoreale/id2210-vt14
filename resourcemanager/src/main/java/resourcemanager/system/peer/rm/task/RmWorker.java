@@ -49,6 +49,7 @@ public class RmWorker extends ComponentDefinition {
 			Task t = new Task(event.getId(), event.getNumCpus(),
 					event.getMemoryInMbs(), event.getTimeToHoldResource());
 			waiting.add(t);
+			res.setQueueLength(waiting.size());
 			pop();
 		}
 	};
@@ -83,6 +84,7 @@ public class RmWorker extends ComponentDefinition {
 		int memoryInMbs = t.getMemoryInMbs();
 		if (res.isAvailable(numCpus, memoryInMbs)) {
 			waiting.poll();
+			res.setQueueLength(waiting.size());
 			res.allocate(numCpus, memoryInMbs);
 			t.allocate();
 			logger.info("Allocated {}", t.getId());
