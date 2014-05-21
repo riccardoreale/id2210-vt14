@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import se.sics.ipasdistances.AsIpGenerator;
 import se.sics.kompics.ChannelFilter;
 import se.sics.kompics.Component;
@@ -32,7 +33,6 @@ import common.configuration.CyclonConfiguration;
 import common.configuration.DataCenterConfiguration;
 import common.configuration.RmConfiguration;
 import common.configuration.TManConfiguration;
-import common.peer.AvailableResources;
 import common.simulation.ClientRequestResource;
 import common.simulation.ConsistentHashtable;
 import common.simulation.GenerateReport;
@@ -42,12 +42,12 @@ import common.simulation.SimulatorInit;
 import common.simulation.SimulatorPort;
 
 public final class DataCenterSimulator extends ComponentDefinition {
-	
+
 	private class Pair<X, Y> {
 		public final X fst;
 		public final Y snd;
-		
-		public Pair (X f, Y s) {
+
+		public Pair(X f, Y s) {
 			fst = f;
 			snd = s;
 		}
@@ -66,7 +66,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 	private Long identifierSpaceSize;
 	private ConsistentHashtable<Long> ringNodes;
 	private AsIpGenerator ipGenerator = AsIpGenerator.getInstance(125);
-	private Map<Address, Pair<Component, AvailableResources>> omniscentOracle = new HashMap<Address, Pair<Component, AvailableResources>>();
+	private Map<Address, Pair<Component, AvailableResourcesImpl>> omniscentOracle = new HashMap<Address, Pair<Component, AvailableResourcesImpl>>();
 
 	Random r = new Random(System.currentTimeMillis());
 
@@ -120,23 +120,23 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 	};
 
-	private Comparator<Pair<Component, AvailableResources>> cmpPeer = new Comparator<Pair<Component, AvailableResources>>() {
+	private Comparator<Pair<Component, AvailableResourcesImpl>> cmpPeer = new Comparator<Pair<Component, AvailableResourcesImpl>>() {
 		@Override
-		public int compare(Pair<Component, AvailableResources> o1,
-						   Pair<Component, AvailableResources> o2) {
-			int c;
+		public int compare(Pair<Component, AvailableResourcesImpl> o1,
+				Pair<Component, AvailableResourcesImpl> o2) {
+			// int c;
+			//
+			// c = o1.snd.getQueueLength() - o2.snd.getQueueLength();
+			// if (c != 0)
+			// return c;
+			//
+			// /* Arbitrary selection of memory as first comparison index */
+			// c = o1.snd.getFreeMemInMbs() - o2.snd.getFreeMemInMbs();
+			// if (c != 0)
+			// return c;
+			// return o1.snd.getNumFreeCpus() - o2.snd.getNumFreeCpus();
 
-			c = o1.snd.getQueueLength() - o2.snd.getQueueLength();
-			if (c != 0)
-				return c;
-
-			/* Arbitrary selection of memory as first comparison index */
-			c = o1.snd.getFreeMemInMbs()
-					- o2.snd.getFreeMemInMbs();
-			if (c != 0)
-				return c;
-			return o1.snd.getNumFreeCpus()
-					- o2.snd.getNumFreeCpus();
+			return -1;
 		}
 
 	};
@@ -203,7 +203,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 				new MessageDestinationFilter(address));
 		connect(timer, peer.getNegative(Timer.class));
 
-		AvailableResources ar = new AvailableResources(numCpus, memInMb);
+		AvailableResourcesImpl ar = new AvailableResourcesImpl(numCpus, memInMb);
 		trigger(new PeerInit(address, bootstrapConfiguration,
 				cyclonConfiguration, rmConfiguration, ar), peer.getControl());
 
@@ -211,7 +211,8 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		peers.put(id, peer);
 		peersAddress.put(id, address);
 		Snapshot.addPeer(address, ar);
-		omniscentOracle.put(address, new Pair<Component, AvailableResources>(peer, ar));
+		omniscentOracle.put(address,
+				new Pair<Component, AvailableResourcesImpl>(peer, ar));
 	}
 
 	private void stopAndDestroyPeer(Long id) {

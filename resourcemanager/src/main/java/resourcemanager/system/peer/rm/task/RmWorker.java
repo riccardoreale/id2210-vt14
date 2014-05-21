@@ -15,8 +15,6 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
-import common.peer.AvailableResources;
-
 public class RmWorker extends ComponentDefinition {
 	private static final Logger logger = LoggerFactory
 			.getLogger(RmWorker.class);
@@ -28,7 +26,7 @@ public class RmWorker extends ComponentDefinition {
 	Queue<RmTask> waiting = new LinkedList<RmTask>();
 	Queue<RmTask> done = new LinkedList<RmTask>();
 
-	private AvailableResources res = null;
+	private AvailableResourcesImpl res = null;
 
 	public RmWorker() {
 		subscribe(handleInit, control);
@@ -49,7 +47,6 @@ public class RmWorker extends ComponentDefinition {
 			RmTask t = new RmTask(event.getId(), event.getNumCpus(),
 					event.getMemoryInMbs(), event.getTimeToHoldResource());
 			waiting.add(t);
-			res.setQueueLength(waiting.size());
 			pop();
 		}
 	};
@@ -84,7 +81,6 @@ public class RmWorker extends ComponentDefinition {
 		int memoryInMbs = t.getMemoryInMbs();
 		if (res.isAvailable(numCpus, memoryInMbs)) {
 			waiting.poll();
-			res.setQueueLength(waiting.size());
 			res.allocate(numCpus, memoryInMbs);
 			t.allocate();
 			logger.info("Allocated {}", t.getId());
