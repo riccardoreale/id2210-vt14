@@ -24,9 +24,9 @@ public class RmWorker extends ComponentDefinition {
 	Positive<Timer> timerPort = positive(Timer.class);
 	Positive<WorkerPort> workerPort = positive(WorkerPort.class);
 
-	Map<Long, Task> running = new HashMap<Long, Task>();
-	Queue<Task> waiting = new LinkedList<Task>();
-	Queue<Task> done = new LinkedList<Task>();
+	Map<Long, RmTask> running = new HashMap<Long, RmTask>();
+	Queue<RmTask> waiting = new LinkedList<RmTask>();
+	Queue<RmTask> done = new LinkedList<RmTask>();
 
 	private AvailableResources res = null;
 
@@ -46,7 +46,7 @@ public class RmWorker extends ComponentDefinition {
 	Handler<AllocateResources> handleAllocateResources = new Handler<AllocateResources>() {
 		@Override
 		public void handle(AllocateResources event) {
-			Task t = new Task(event.getId(), event.getNumCpus(),
+			RmTask t = new RmTask(event.getId(), event.getNumCpus(),
 					event.getMemoryInMbs(), event.getTimeToHoldResource());
 			waiting.add(t);
 			res.setQueueLength(waiting.size());
@@ -57,7 +57,7 @@ public class RmWorker extends ComponentDefinition {
 	Handler<TaskDone> handleTaskDone = new Handler<TaskDone>() {
 		@Override
 		public void handle(TaskDone event) {
-			Task t = running.remove(event.id);
+			RmTask t = running.remove(event.id);
 			assert t != null;
 			t.deallocate();
 			res.release(t.getNumCpus(), t.getMemoryInMbs());
@@ -76,7 +76,7 @@ public class RmWorker extends ComponentDefinition {
 	};
 
 	private void pop() {
-		Task t = waiting.peek();
+		RmTask t = waiting.peek();
 		if (t == null)
 			return;
 
