@@ -13,10 +13,10 @@ import common.peer.AvailableResources;
  */
 public class AvailableResourcesImpl implements AvailableResources {
 
-	private volatile int numFreeCpus;
-	private volatile int freeMemInMbs;
+	volatile int numFreeCpus;
+	volatile int freeMemInMbs;
 
-	private WorkingQueue workingQueue;
+	WorkingQueue workingQueue;
 
 	public AvailableResourcesImpl(int numFreeCpus, int freeMemInMbs) {
 		this.numFreeCpus = numFreeCpus;
@@ -57,7 +57,10 @@ public class AvailableResourcesImpl implements AvailableResources {
 	}
 
 	public int getWorkingQueueTime(int numCpus, int memInMbs) {
-		// TODO
-		return 0;
+		if (isAvailable(numCpus, memInMbs))
+			return 0;
+		else
+			return workingQueue.getWorkingQueueTime(numFreeCpus, freeMemInMbs,
+					numCpus, memInMbs);
 	}
 }

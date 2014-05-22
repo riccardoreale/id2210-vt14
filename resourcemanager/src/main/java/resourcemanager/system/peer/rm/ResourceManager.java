@@ -154,7 +154,8 @@ public final class ResourceManager extends ComponentDefinition {
 		public void handle(ClientRequestResource event) {
 
 			System.out.println(self.getIp() + " allocating resources: "
-					+ event.getNumCpus() + " + " + event.getMemoryInMbs());
+					+ event.getNumCpus() + " + " + event.getMemoryInMbs()
+					+ " (" + event.getTimeToHoldResource() + ")");
 			// TODO: Ask for resources from neighbours
 			// by sending a ResourceRequest
 			// RequestResources.Request req = new RequestResources.Request(self,

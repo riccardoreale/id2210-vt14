@@ -6,7 +6,7 @@ public class Task {
 	protected final int numCpus;
 	protected final int memoryInMbs;
 	protected final int timeToHoldResource;
-	protected long enqueueTime; 
+	protected long enqueueTime;
 	protected long allocateTime;
 	protected long deallocateTime;
 
@@ -19,6 +19,10 @@ public class Task {
 		this.enqueueTime = -1;
 		this.allocateTime = -1;
 		this.deallocateTime = -1;
+	}
+
+	public void queue() {
+		this.enqueueTime = System.currentTimeMillis();
 	}
 
 	public void allocate() {

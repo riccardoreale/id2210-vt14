@@ -1,11 +1,11 @@
 package simulator.core;
 
 import java.net.InetAddress;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import se.sics.ipasdistances.AsIpGenerator;
@@ -110,7 +110,8 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		public void handle(ClientRequestResource event) {
 			Component peer = null;
 			if (dataCenterConfiguration.omniscent) {
-				peer = omniscentSelector();
+				peer = omniscentSelector(event.getNumCpus(),
+						event.getMemoryInMbs());
 			} else {
 				Long successor = ringNodes.getNode(event.getId());
 				peer = peers.get(successor);
@@ -141,8 +142,17 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 	};
 
-	private Component omniscentSelector() {
-		return Collections.max(omniscentOracle.values(), cmpPeer).fst;
+	private Component omniscentSelector(int numCpus, int memInMbs) {
+
+		TreeMap<Integer, Component> fastestList = new TreeMap<Integer, Component>();
+		for (Pair<Component, AvailableResourcesImpl> couple : omniscentOracle
+				.values()) {
+			int workingQueueTime = couple.snd.getWorkingQueueTime(numCpus,
+					memInMbs);
+			fastestList.put(workingQueueTime, couple.fst);
+		}
+
+		return fastestList.firstEntry().getValue();
 	}
 
 	Handler<PeerJoin> handlePeerJoin = new Handler<PeerJoin>() {
