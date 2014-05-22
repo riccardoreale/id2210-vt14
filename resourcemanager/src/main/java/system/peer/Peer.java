@@ -3,6 +3,9 @@ package system.peer;
 import java.util.LinkedList;
 import java.util.Set;
 
+import resourcemanager.system.peer.rm.ResourceManager;
+import resourcemanager.system.peer.rm.RmInit;
+import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -17,16 +20,19 @@ import se.sics.kompics.p2p.bootstrap.PeerEntry;
 import se.sics.kompics.p2p.bootstrap.client.BootstrapClient;
 import se.sics.kompics.p2p.bootstrap.client.BootstrapClientInit;
 import se.sics.kompics.timer.Timer;
-
-import resourcemanager.system.peer.rm.ResourceManager;
-import resourcemanager.system.peer.rm.RmInit;
-import common.configuration.RmConfiguration;
-import common.configuration.CyclonConfiguration;
-import common.peer.AvailableResources;
-import common.peer.PeerDescriptor;
-import cyclon.system.peer.cyclon.*;
 import tman.system.peer.tman.TMan;
 import tman.system.peer.tman.TManSamplePort;
+
+import common.configuration.CyclonConfiguration;
+import common.configuration.RmConfiguration;
+import common.peer.PeerDescriptor;
+
+import cyclon.system.peer.cyclon.Cyclon;
+import cyclon.system.peer.cyclon.CyclonInit;
+import cyclon.system.peer.cyclon.CyclonJoin;
+import cyclon.system.peer.cyclon.CyclonPort;
+import cyclon.system.peer.cyclon.CyclonSamplePort;
+import cyclon.system.peer.cyclon.JoinCompleted;
 
 public final class Peer extends ComponentDefinition {
 
@@ -41,7 +47,7 @@ public final class Peer extends ComponentDefinition {
 	private boolean bootstrapped;
 	private RmConfiguration rmConfiguration;
 
-	private AvailableResources availableResources;
+	private AvailableResourcesImpl availableResources;
 
 	public Peer() {
 		cyclon = create(Cyclon.class);

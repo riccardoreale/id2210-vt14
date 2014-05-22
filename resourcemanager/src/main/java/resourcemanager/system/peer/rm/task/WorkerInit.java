@@ -3,14 +3,13 @@ package resourcemanager.system.peer.rm.task;
 import se.sics.kompics.Init;
 import se.sics.kompics.address.Address;
 
-import common.peer.AvailableResources;
-
 public class WorkerInit extends Init {
 
 	private final Address peerSelf;
-	private final AvailableResources availableResources;
+	private final AvailableResourcesImpl availableResources;
 
-	public WorkerInit(Address peerSelf, AvailableResources availableResources) {
+	public WorkerInit(Address peerSelf,
+			AvailableResourcesImpl availableResources) {
 		super();
 		this.peerSelf = peerSelf;
 		this.availableResources = availableResources;
@@ -20,7 +19,7 @@ public class WorkerInit extends Init {
 		return peerSelf;
 	}
 
-	public AvailableResources getAvailableResources() {
+	public AvailableResourcesImpl getAvailableResources() {
 		return availableResources;
 	}
 

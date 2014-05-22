@@ -1,10 +1,5 @@
 package resourcemanager.system.peer.rm.task;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,8 +10,6 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
-import common.peer.AvailableResources;
-
 public class RmWorker extends ComponentDefinition {
 	private static final Logger logger = LoggerFactory
 			.getLogger(RmWorker.class);
@@ -24,11 +17,7 @@ public class RmWorker extends ComponentDefinition {
 	Positive<Timer> timerPort = positive(Timer.class);
 	Positive<WorkerPort> workerPort = positive(WorkerPort.class);
 
-	Map<Long, RmTask> running = new HashMap<Long, RmTask>();
-	Queue<RmTask> waiting = new LinkedList<RmTask>();
-	Queue<RmTask> done = new LinkedList<RmTask>();
-
-	private AvailableResources res = null;
+	private AvailableResourcesImpl res = null;
 
 	public RmWorker() {
 		subscribe(handleInit, control);
@@ -48,8 +37,8 @@ public class RmWorker extends ComponentDefinition {
 		public void handle(AllocateResources event) {
 			RmTask t = new RmTask(event.getId(), event.getNumCpus(),
 					event.getMemoryInMbs(), event.getTimeToHoldResource());
-			waiting.add(t);
-			res.setQueueLength(waiting.size());
+			res.workingQueue.waiting.add(t);
+			t.queue();
 			pop();
 		}
 	};
@@ -57,11 +46,11 @@ public class RmWorker extends ComponentDefinition {
 	Handler<TaskDone> handleTaskDone = new Handler<TaskDone>() {
 		@Override
 		public void handle(TaskDone event) {
-			RmTask t = running.remove(event.id);
+			RmTask t = (RmTask) res.workingQueue.running.remove(event.id);
 			assert t != null;
 			t.deallocate();
 			res.release(t.getNumCpus(), t.getMemoryInMbs());
-			done.add(t);
+			res.workingQueue.done.add(t);
 			logger.info(
 					"Done {}, QueueTime={}, TotalTime={}",
 					new Object[] {
@@ -76,19 +65,18 @@ public class RmWorker extends ComponentDefinition {
 	};
 
 	private void pop() {
-		RmTask t = waiting.peek();
+		RmTask t = (RmTask) res.workingQueue.waiting.peek();
 		if (t == null)
 			return;
 
 		int numCpus = t.getNumCpus();
 		int memoryInMbs = t.getMemoryInMbs();
 		if (res.isAvailable(numCpus, memoryInMbs)) {
-			waiting.poll();
-			res.setQueueLength(waiting.size());
+			res.workingQueue.waiting.poll();
 			res.allocate(numCpus, memoryInMbs);
 			t.allocate();
 			logger.info("Allocated {}", t.getId());
-			running.put(t.getId(), t);
+			res.workingQueue.running.put(t.getId(), t);
 
 			ScheduleTimeout tout = new ScheduleTimeout(
 					t.getTimeToHoldResource());

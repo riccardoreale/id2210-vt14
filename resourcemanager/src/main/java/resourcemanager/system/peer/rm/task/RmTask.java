@@ -1,7 +1,6 @@
 package resourcemanager.system.peer.rm.task;
 
 import se.sics.kompics.address.Address;
-import common.peer.Task;
 
 public class RmTask extends Task {
 

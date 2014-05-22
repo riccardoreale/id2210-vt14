@@ -1,4 +1,4 @@
-package common.peer;
+package resourcemanager.system.peer.rm.task;
 
 public class Task {
 
@@ -6,7 +6,7 @@ public class Task {
 	protected final int numCpus;
 	protected final int memoryInMbs;
 	protected final int timeToHoldResource;
-	protected long enqueueTime; 
+	protected long enqueueTime;
 	protected long allocateTime;
 	protected long deallocateTime;
 
@@ -16,23 +16,27 @@ public class Task {
 		this.numCpus = numCpus;
 		this.memoryInMbs = memoryInMbs;
 		this.timeToHoldResource = timeToHoldResource;
-	    this.enqueueTime = 0; 
-	    this.allocateTime = 0;
-	    this.deallocateTime = 0;
+		this.enqueueTime = -1;
+		this.allocateTime = -1;
+		this.deallocateTime = -1;
 	}
-	
-	public void allocate () {
+
+	public void queue() {
+		this.enqueueTime = System.currentTimeMillis();
+	}
+
+	public void allocate() {
 		this.allocateTime = System.currentTimeMillis();
 	}
-	
-	public void deallocate () {
+
+	public void deallocate() {
 		this.deallocateTime = System.currentTimeMillis();
 	}
-	
+
 	public long getQueueTime() {
 		return allocateTime - enqueueTime;
 	}
-	
+
 	public long getTotalTime() {
 		return deallocateTime - enqueueTime;
 	}
