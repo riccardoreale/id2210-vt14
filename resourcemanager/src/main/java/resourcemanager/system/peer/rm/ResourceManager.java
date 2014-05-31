@@ -188,7 +188,7 @@ public final class ResourceManager extends ComponentDefinition {
 
 		int put = PROBES_PER_JOB; // × t.njobs
 		for (PeerCap cap : sel) {
-			if (put-- > 0)
+			if (put-- <= 0)
 				break;
 
 			outstanding.put(cap.address, cap);
