@@ -3,7 +3,7 @@ package resourcemanager.system.peer.rm.task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import resourcemanager.system.peer.rm.AllocateResources;
+import resourcemanager.system.peer.rm.Resources;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
@@ -32,9 +32,9 @@ public class RmWorker extends ComponentDefinition {
 		}
 	};
 
-	Handler<AllocateResources> handleAllocateResources = new Handler<AllocateResources>() {
+	Handler<Resources.Allocate> handleAllocateResources = new Handler<Resources.Allocate>() {
 		@Override
-		public void handle(AllocateResources event) {
+		public void handle(Resources.Allocate event) {
 			RmTask t = new RmTask(event.getId(), event.getNumCpus(),
 					event.getMemoryInMbs(), event.getTimeToHoldResource());
 			res.workingQueue.waiting.add(t);
