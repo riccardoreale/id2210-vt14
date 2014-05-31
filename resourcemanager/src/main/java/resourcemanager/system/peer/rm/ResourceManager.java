@@ -28,6 +28,7 @@ import tman.system.peer.tman.TManSample;
 import tman.system.peer.tman.TManSamplePort;
 
 import common.configuration.RmConfiguration;
+import common.peer.PeerCap;
 import common.simulation.ClientRequestResource;
 
 import cyclon.system.peer.cyclon.CyclonSample;
@@ -49,7 +50,7 @@ public final class ResourceManager extends ComponentDefinition {
 	Negative<Web> webPort = negative(Web.class);
 	Positive<CyclonSamplePort> cyclonSamplePort = positive(CyclonSamplePort.class);
 	Positive<TManSamplePort> tmanPort = positive(TManSamplePort.class);
-	ArrayList<Address> neighbours = new ArrayList<Address>();
+	ArrayList<PeerCap> neighbours = new ArrayList<PeerCap>();
 	private Address self;
 	private RmConfiguration configuration;
 	Random random;
@@ -115,7 +116,8 @@ public final class ResourceManager extends ComponentDefinition {
 			if (neighbours.isEmpty()) {
 				return;
 			}
-			Address dest = neighbours.get(random.nextInt(neighbours.size()));
+			Address dest = neighbours.get(random.nextInt(neighbours.size()))
+					.getAddress();
 
 		}
 	};

@@ -1,36 +1,31 @@
 package cyclon.system.peer.cyclon;
 
 import java.io.Serializable;
-import se.sics.kompics.address.Address;
 
+import common.peer.PeerCap;
 
 public class PeerDescriptor implements Comparable<PeerDescriptor>, Serializable {
 	private static final long serialVersionUID = 1906679375438244117L;
-	private final Address peerAddress;
+	private final PeerCap peerCap;
 	private int age;
 
-
-	public PeerDescriptor(Address peerAddress) {
-		this.peerAddress = peerAddress;
+	public PeerDescriptor(PeerCap peerCap) {
+		this.peerCap = peerCap;
 		this.age = 0;
 	}
-
 
 	public int incrementAndGetAge() {
 		age++;
 		return age;
 	}
 
-
 	public int getAge() {
 		return age;
 	}
 
-
-	public Address getAddress() {
-		return peerAddress;
+	public PeerCap getPeerCap() {
+		return peerCap;
 	}
-
 
 	@Override
 	public int compareTo(PeerDescriptor that) {
@@ -41,15 +36,13 @@ public class PeerDescriptor implements Comparable<PeerDescriptor>, Serializable 
 		return 0;
 	}
 
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((peerAddress == null) ? 0 : peerAddress.hashCode());
+		result = prime * result + ((peerCap == null) ? 0 : peerCap.hashCode());
 		return result;
 	}
-
 
 	@Override
 	public boolean equals(Object obj) {
@@ -60,18 +53,17 @@ public class PeerDescriptor implements Comparable<PeerDescriptor>, Serializable 
 		if (getClass() != obj.getClass())
 			return false;
 		PeerDescriptor other = (PeerDescriptor) obj;
-		if (peerAddress == null) {
-			if (other.peerAddress != null)
+		if (peerCap == null) {
+			if (other.peerCap != null)
 				return false;
-		} else if (!peerAddress.equals(other.peerAddress))
+		} else if (!peerCap.equals(other.peerCap))
 			return false;
 		return true;
 	}
 
-
 	@Override
 	public String toString() {
-		return peerAddress + "";
+		return peerCap + "";
 	}
-	
+
 }

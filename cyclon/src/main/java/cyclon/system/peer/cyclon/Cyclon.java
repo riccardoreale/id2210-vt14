@@ -1,7 +1,5 @@
 package cyclon.system.peer.cyclon;
 
-import common.configuration.CyclonConfiguration;
-import common.peer.AvailableResources;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -11,13 +9,16 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
+import se.sics.kompics.address.Address;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.CancelTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
-import se.sics.kompics.address.Address;
+import common.configuration.CyclonConfiguration;
+import common.peer.AvailableResources;
+import common.peer.PeerCap;
 
 public final class Cyclon extends ComponentDefinition {
 
@@ -36,8 +37,8 @@ public final class Cyclon extends ComponentDefinition {
 	private CyclonConfiguration cyclonConfiguration;
 	private HashMap<UUID, Address> outstandingRandomShuffles;
 
-        private AvailableResources availableResources;
-	
+	private AvailableResources availableResources;
+
 	public Cyclon() {
 		outstandingRandomShuffles = new HashMap<UUID, Address>();
 
@@ -50,18 +51,16 @@ public final class Cyclon extends ComponentDefinition {
 		subscribe(handlePartnersRequest, partnersPort);
 	}
 
-	
 	Handler<CyclonInit> handleInit = new Handler<CyclonInit>() {
 		public void handle(CyclonInit init) {
 			cyclonConfiguration = init.getConfiguration();
-                        availableResources = init.getAvailableResources();
+			availableResources = init.getAvailableResources();
 			shuffleLength = cyclonConfiguration.getShuffleLength();
 			shufflePeriod = cyclonConfiguration.getShufflePeriod();
 			shuffleTimeout = cyclonConfiguration.getShuffleTimeout();
 		}
 	};
 
-	
 	/**
 	 * handles a request to join a Cyclon network using a set of introducer
 	 * nodes provided in the Join event.
@@ -70,7 +69,7 @@ public final class Cyclon extends ComponentDefinition {
 		public void handle(CyclonJoin event) {
 			self = event.getSelf();
 			cache = new Cache(cyclonConfiguration.getRandomViewSize(), self);
-			
+
 			LinkedList<Address> insiders = event.getCyclonInsiders();
 
 			if (insiders.size() == 0) {
@@ -78,7 +77,8 @@ public final class Cyclon extends ComponentDefinition {
 				trigger(new JoinCompleted(self), cyclonPort);
 
 				// schedule shuffling
-				SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(shufflePeriod, shufflePeriod);
+				SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(
+						shufflePeriod, shufflePeriod);
 				spt.setTimeoutEvent(new InitiateShuffle(spt));
 				trigger(spt, timerPort);
 				return;
@@ -90,7 +90,6 @@ public final class Cyclon extends ComponentDefinition {
 		}
 	};
 
-	
 	/**
 	 * initiates a shuffle of size <code>shuffleSize</code>. Called either
 	 * during the join protocol with a <code>shuffleSize</code> of 1, or
@@ -101,22 +100,26 @@ public final class Cyclon extends ComponentDefinition {
 	 */
 	private void initiateShuffle(int shuffleSize, Address randomPeer) {
 		// send the random view to a random peer
-		ArrayList<PeerDescriptor> randomDescriptors = cache.selectToSendAtActive(shuffleSize - 1, randomPeer);
-		randomDescriptors.add(new PeerDescriptor(self));
-		DescriptorBuffer randomBuffer = new DescriptorBuffer(self, randomDescriptors);
-		
+		ArrayList<PeerDescriptor> randomDescriptors = cache
+				.selectToSendAtActive(shuffleSize - 1, randomPeer);
+		randomDescriptors.add(new PeerDescriptor(new PeerCap(self,
+				availableResources.getTotalCpus(), availableResources
+						.getTotalMemory())));
+		DescriptorBuffer randomBuffer = new DescriptorBuffer(self,
+				randomDescriptors);
+
 		ScheduleTimeout rst = new ScheduleTimeout(shuffleTimeout);
 		rst.setTimeoutEvent(new ShuffleTimeout(rst, randomPeer));
 		UUID rTimeoutId = rst.getTimeoutEvent().getTimeoutId();
 
 		outstandingRandomShuffles.put(rTimeoutId, randomPeer);
-		ShuffleRequest rRequest = new ShuffleRequest(rTimeoutId, randomBuffer, self, randomPeer);
+		ShuffleRequest rRequest = new ShuffleRequest(rTimeoutId, randomBuffer,
+				self, randomPeer);
 
 		trigger(rst, timerPort);
 		trigger(rRequest, networkPort);
 	}
 
-	
 	/**
 	 * Periodically, will initiate regular shuffles. This is the first half of
 	 * the "active thread" of the Cyclon specification.
@@ -124,31 +127,31 @@ public final class Cyclon extends ComponentDefinition {
 	Handler<InitiateShuffle> handleInitiateShuffle = new Handler<InitiateShuffle>() {
 		public void handle(InitiateShuffle event) {
 			cache.incrementDescriptorAges();
-			
+
 			Address randomPeer = cache.selectPeerToShuffleWith();
-			
+
 			if (randomPeer != null) {
 				initiateShuffle(shuffleLength, randomPeer);
-                                trigger(new CyclonSample(getPartners()), samplePort);
+				trigger(new CyclonSample(getPartners()), samplePort);
 			}
 		}
 	};
 
-	
 	Handler<ShuffleRequest> handleShuffleRequest = new Handler<ShuffleRequest>() {
 		public void handle(ShuffleRequest event) {
 			Address peer = event.getRandomBuffer().getFrom();
 			DescriptorBuffer receivedRandomBuffer = event.getRandomBuffer();
-			DescriptorBuffer toSendRandomBuffer = new DescriptorBuffer(self, cache.selectToSendAtPassive(receivedRandomBuffer.getSize(), peer));
+			DescriptorBuffer toSendRandomBuffer = new DescriptorBuffer(self,
+					cache.selectToSendAtPassive(receivedRandomBuffer.getSize(),
+							peer));
 			cache.selectToKeep(peer, receivedRandomBuffer.getDescriptors());
-			ShuffleResponse response = new ShuffleResponse(event.getRequestId(), 
-                                toSendRandomBuffer, self, peer);
+			ShuffleResponse response = new ShuffleResponse(
+					event.getRequestId(), toSendRandomBuffer, self, peer);
 			trigger(response, networkPort);
-			
+
 		}
 	};
 
-	
 	Handler<ShuffleResponse> handleShuffleResponse = new Handler<ShuffleResponse>() {
 		public void handle(ShuffleResponse event) {
 			if (joining) {
@@ -156,7 +159,8 @@ public final class Cyclon extends ComponentDefinition {
 				trigger(new JoinCompleted(self), cyclonPort);
 
 				// schedule shuffling
-				SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(shufflePeriod, shufflePeriod);
+				SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(
+						shufflePeriod, shufflePeriod);
 				spt.setTimeoutEvent(new InitiateShuffle(spt));
 				trigger(spt, timerPort);
 			}
@@ -172,31 +176,29 @@ public final class Cyclon extends ComponentDefinition {
 			Address peer = event.getSource();
 			DescriptorBuffer receivedRandomBuffer = event.getRandomBuffer();
 			cache.selectToKeep(peer, receivedRandomBuffer.getDescriptors());
-			
+
 		}
 	};
 
-	
 	Handler<ShuffleTimeout> handleShuffleTimeout = new Handler<ShuffleTimeout>() {
 		public void handle(ShuffleTimeout event) {
 		}
 	};
-	
-	
+
 	Handler<CyclonPartnersRequest> handlePartnersRequest = new Handler<CyclonPartnersRequest>() {
 		public void handle(CyclonPartnersRequest event) {
-			CyclonPartnersResponse response = new CyclonPartnersResponse(getPartners());
+			CyclonPartnersResponse response = new CyclonPartnersResponse(
+					getPartners());
 			trigger(response, partnersPort);
 		}
 	};
-	
 
-	private ArrayList<Address> getPartners() {
+	private ArrayList<PeerCap> getPartners() {
 		ArrayList<PeerDescriptor> partnersDescriptors = cache.getAll();
-		ArrayList<Address> partners = new ArrayList<Address>();
+		ArrayList<PeerCap> partners = new ArrayList<PeerCap>();
 		for (PeerDescriptor desc : partnersDescriptors)
-			partners.add(desc.getAddress());
-		
+			partners.add(desc.getPeerCap());
+
 		return partners;
 	}
 }

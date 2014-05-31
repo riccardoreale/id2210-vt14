@@ -10,10 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import common.peer.PeerCap;
-import common.utils.FuncTools;
-import common.utils.FuncTools.Proposition;
-
 import resourcemanager.system.peer.rm.task.Task;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Event;
@@ -22,6 +18,10 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.address.Address;
 import se.sics.kompics.network.Message;
 import se.sics.kompics.network.Network;
+
+import common.peer.PeerCap;
+import common.utils.FuncTools;
+import common.utils.FuncTools.Proposition;
 
 public class Prober extends ComponentDefinition {
 
@@ -81,8 +81,8 @@ public class Prober extends ComponentDefinition {
 		Proposition<PeerCap> p = new Proposition<PeerCap>() {
 			@Override
 			public boolean eval(PeerCap param) {
-				return param.memoryMb >= t.getMemoryInMbs()
-						&& param.nCpus >= t.getNumCpus()
+				return param.maxMemory >= t.getMemoryInMbs()
+						&& param.maxCpu >= t.getNumCpus()
 						&& !outstanding.containsKey(param.address);
 			}
 		};
