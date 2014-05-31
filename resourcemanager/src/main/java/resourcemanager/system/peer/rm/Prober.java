@@ -2,13 +2,12 @@ package resourcemanager.system.peer.rm;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Queue;
 
 import common.peer.PeerCap;
 import common.utils.FuncTools;
@@ -63,9 +62,8 @@ public class Prober extends ComponentDefinition {
 	private final Address self;
 
 	private final Collection<PeerCap> neighbors;
-	private final Set<Task> waiting = new HashSet<Task>();
+	private final Queue<Task> waiting = new LinkedList<Task>();
 	private final Map<Address, PeerCap> outstanding = new HashMap<Address, PeerCap>();
-	private final Map<Address, PeerCap> returned = new HashMap<Address, PeerCap>();
 
 	public Prober(Address self, Positive<Network> net,
 			Collection<PeerCap> neighbors) {
@@ -101,63 +99,22 @@ public class Prober extends ComponentDefinition {
 		}
 	}
 
-	private static Comparator<Task> cmp = new Comparator<Task>() {
-		@Override
-		public int compare(Task o1, Task o2) {
-			int v1 = o1.getMemoryInMbs();
-			int v2 = o2.getMemoryInMbs();
-			if (v1 < v2)
-				return -1;
-			if (v2 > v1)
-				return -1;
-			v1 = o1.getNumCpus();
-			v2 = o2.getNumCpus();
-			if (v1 < v2)
-				return -1;
-			if (v2 > v1)
-				return -1;
-			return 0;
-		}
-	};
-
-	private void serve() {
-		LinkedList<Task> l = new LinkedList<Task>(waiting);
-		waiting.clear();
-		Collections.sort(l, cmp);
-
-		/* Useless java documentation... Assume this is descending. */
-		assert l.size() < 2 || cmp.compare(l.get(0), l.get(1)) <= 0;
-
-		while (l.size() > 0) {
-			Task biggest = l.pollLast();
-			PeerCap poorest = null;
-
-			for (PeerCap c : returned.values()) {
-				if (!c.canRun(biggest.getNumCpus(), biggest.getMemoryInMbs())) {
-					continue;
-				}
-
-				if (poorest == null || poorest.compareTo(c) > 1) {
-					poorest = c;
-				}
-			}
-
-			if (poorest == null) {
-				/*
-				 * Only probes for smaller jobs arrived so far or our probes
-				 * were all stoled by other tasks.
-				 */
-				if (outstanding.size() > 0) {
-					waiting.add(biggest);
-				} else {
-					assert false : "Not until we add churn and enable FD.";
-					subscribe(biggest);
-				}
+	private void serve(Address peer, PeerCap cap) {
+		Iterator<Task> i = waiting.iterator();
+		boolean assigned = false;
+		while (i.hasNext() && !assigned) {
+			Task t = i.next();
+			if (cap.canRun(t.getNumCpus(), t.getMemoryInMbs())) {
+				i.remove();
+				assigned = true;
 			}
 		}
 
-		/* No waiting tasks left? Send pro-active cancellation */
+		System.err.printf("serve(%s) -> assigned? %s\n", peer, assigned);
+
+		/* No waiting tasks left? Send cancellation */
 		if (waiting.isEmpty()) {
+			trigger(new Cancel(self, peer), net);
 			for (Address to : outstanding.keySet()) {
 				trigger(new Cancel(self, to), net);
 			}
@@ -169,10 +126,10 @@ public class Prober extends ComponentDefinition {
 		public void handle(Response resp) {
 			Address peer = resp.getSource();
 			PeerCap cap = outstanding.remove(peer);
-			if (cap == null)
-				return; // Ignore orphan messages.
-			returned.put(peer, cap);
-			serve();
+			if (cap != null) {
+				serve(peer, cap);
+			}
+			assert false : "Got orphan of a dead node";
 		}
 	};
 }
