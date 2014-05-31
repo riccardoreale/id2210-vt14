@@ -20,4 +20,16 @@ public class FuncTools {
 		return out;
 	}
 
+	public interface Transformation<Ts, Td> {
+		public Td eval (Ts param);
+	}
+
+	public static <Ts, Td> List<Td> map (Transformation<Ts, Td> f, Collection<Ts> c) {
+		List<Td> out = new ArrayList<Td>(c.size());
+		for (Ts i : c) {
+			out.add(f.eval(i));
+		}
+		return out;
+	}
+
 }
