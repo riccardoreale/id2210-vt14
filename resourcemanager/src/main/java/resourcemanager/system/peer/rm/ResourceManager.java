@@ -1,18 +1,25 @@
 package resourcemanager.system.peer.rm;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import resourcemanager.system.peer.rm.Probing.Request;
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.RmWorker;
 import resourcemanager.system.peer.rm.task.WorkerInit;
 import resourcemanager.system.peer.rm.task.WorkerPort;
+import resourcemanager.system.peer.rm.task.Task;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -28,7 +35,10 @@ import tman.system.peer.tman.TManSample;
 import tman.system.peer.tman.TManSamplePort;
 
 import common.configuration.RmConfiguration;
+import common.peer.PeerCap;
 import common.simulation.ClientRequestResource;
+import common.utils.FuncTools;
+import common.utils.FuncTools.Proposition;
 
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
@@ -41,20 +51,28 @@ import cyclon.system.peer.cyclon.PeerDescriptor;
  */
 public final class ResourceManager extends ComponentDefinition {
 
+	private static final int PROBES_PER_JOB = 2;
+
 	private static final Logger logger = LoggerFactory
 			.getLogger(ResourceManager.class);
-	Positive<RmPort> indexPort = positive(RmPort.class);
-	Positive<Network> networkPort = positive(Network.class);
-	Positive<Timer> timerPort = positive(Timer.class);
-	Negative<Web> webPort = negative(Web.class);
-	Positive<CyclonSamplePort> cyclonSamplePort = positive(CyclonSamplePort.class);
-	Positive<TManSamplePort> tmanPort = positive(TManSamplePort.class);
-	ArrayList<Address> neighbours = new ArrayList<Address>();
+
+	private final Positive<RmPort> indexPort = positive(RmPort.class);
+	private final Positive<Network> networkPort = positive(Network.class);
+	private final Positive<Timer> timerPort = positive(Timer.class);
+	private final Negative<Web> webPort = negative(Web.class);
+	private final Positive<CyclonSamplePort> cyclonSamplePort = positive(CyclonSamplePort.class);
+	private final Positive<TManSamplePort> tmanPort = positive(TManSamplePort.class);
+	private final ArrayList<PeerCap> neighbours = new ArrayList<PeerCap>();
 	private Address self;
 	private RmConfiguration configuration;
-	Random random;
-	// private AvailableResources availableResources;
+	private Random random;
 	private Component worker;
+
+	/* Components for probing */
+	private final Queue<Task> waiting = new LinkedList<Task>();
+	private final Map<Address, PeerCap> outstanding = new HashMap<Address, PeerCap>();
+
+	// private AvailableResources availableResources;
 	// private TaskQueue queue;
 	// When you partition the index you need to find new nodes
 	// This is a routing table maintaining a list of pairs in each partition.
@@ -78,6 +96,8 @@ public final class ResourceManager extends ComponentDefinition {
 		subscribe(handleUpdateTimeout, timerPort);
 		subscribe(handleResourceAllocationRequest, networkPort);
 		subscribe(handleResourceAllocationResponse, networkPort);
+		subscribe(handleProbingRequest, networkPort);
+		subscribe(handleProbingResponse, networkPort);
 		subscribe(handleTManSample, tmanPort);
 
 		worker = create(RmWorker.class);
@@ -115,7 +135,7 @@ public final class ResourceManager extends ComponentDefinition {
 			if (neighbours.isEmpty()) {
 				return;
 			}
-			Address dest = neighbours.get(random.nextInt(neighbours.size()));
+			PeerCap dest = neighbours.get(random.nextInt(neighbours.size()));
 
 		}
 	};
@@ -144,8 +164,77 @@ public final class ResourceManager extends ComponentDefinition {
 
 			// receive a new list of neighbours
 			neighbours.clear();
-			neighbours.addAll(event.getSample());
+			// TODO: addAll when cyclon is fixed
+			//neighbours.addAll(event.getSample());
 
+		}
+	};
+
+	public void subscribe(final Task t) {
+		assert !waiting.contains(t);
+		waiting.add(t);
+
+		Proposition<PeerCap> p = new Proposition<PeerCap>() {
+			@Override
+			public boolean eval(PeerCap param) {
+				return param.memoryMb >= t.getMemoryInMbs()
+						&& param.nCpus >= t.getNumCpus()
+						&& !outstanding.containsKey(param.address);
+			}
+		};
+
+		/* Select only among nodes which can satisfy this task */
+		List<PeerCap> sel = FuncTools.filter(neighbours, p);
+		Collections.shuffle(sel);
+
+		int put = PROBES_PER_JOB; // × t.njobs
+		for (PeerCap cap : sel) {
+			if (put-- > 0)
+				break;
+
+			outstanding.put(cap.address, cap);
+			trigger(new Probing.Request(self, cap.address), networkPort);
+		}
+	}
+
+	private void serve(Address peer, PeerCap cap) {
+		Iterator<Task> i = waiting.iterator();
+		boolean assigned = false;
+		while (i.hasNext() && !assigned) {
+			Task t = i.next();
+			if (cap.canRun(t.getNumCpus(), t.getMemoryInMbs())) {
+				i.remove();
+				assigned = true;
+			}
+		}
+
+		System.err.printf("serve(%s) -> assigned? %s\n", peer, assigned);
+
+		/* No waiting tasks left? Send cancellation */
+		if (waiting.isEmpty()) {
+			trigger(new Probing.Cancel(self, peer), networkPort);
+			for (Address to : outstanding.keySet()) {
+				trigger(new Probing.Cancel(self, to), networkPort);
+			}
+		}
+	}
+
+	private final Handler<Probing.Response> handleProbingResponse = new Handler<Probing.Response>() {
+		@Override
+		public void handle(Probing.Response resp) {
+			Address peer = resp.getSource();
+			PeerCap cap = outstanding.remove(peer);
+			if (cap != null) {
+				serve(peer, cap);
+			}
+			assert false : "Got orphan of a dead node";
+		}
+	};
+
+	private final Handler<Probing.Request> handleProbingRequest = new Handler<Probing.Request>() {
+		@Override
+		public void handle(Request event) {
+			// TODO: enqueue. Then when dequeued emit Probing.Response
 		}
 	};
 
