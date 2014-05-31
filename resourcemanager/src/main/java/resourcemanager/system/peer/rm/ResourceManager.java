@@ -163,9 +163,7 @@ public final class ResourceManager extends ComponentDefinition {
 
 			// receive a new list of neighbours
 			neighbours.clear();
-			// TODO: addAll when cyclon is fixed
-			// neighbours.addAll(event.getSample());
-
+			neighbours.addAll(event.getSample());
 		}
 	};
 
