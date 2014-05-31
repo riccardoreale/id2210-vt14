@@ -69,20 +69,36 @@ public class RmWorker extends ComponentDefinition {
 		if (t == null)
 			return;
 
-		int numCpus = t.getNumCpus();
-		int memoryInMbs = t.getMemoryInMbs();
-		if (res.isAvailable(numCpus, memoryInMbs)) {
+		if (res.isAvailable(t.getNumCpus(), t.getMemoryInMbs())) {
 			res.workingQueue.waiting.poll();
-			res.allocate(numCpus, memoryInMbs);
-			t.allocate();
-			logger.info("Allocated {}", t.getId());
-			res.workingQueue.running.put(t.getId(), t);
-
-			ScheduleTimeout tout = new ScheduleTimeout(
-					t.getTimeToHoldResource());
-			tout.setTimeoutEvent(new TaskDone(tout, t.getId()));
-			trigger(tout, timerPort);
+			if (t.isExecuteDirectly())
+				allocateDirectly(t);
+			else
+				getConfirm(t);
 		}
+	}
+
+	private void getConfirm(RmTask t) {
+		// here we temporary block resources
+		// and ask for confirmation
+		res.allocate(t.getNumCpus(), t.getMemoryInMbs());
+		res.workingQueue.running.put(t.getId(), t);
+
+		// TODO ask for confirmation
+
+	}
+
+	private void allocateDirectly(RmTask t) {
+		// here we allocate resources and start the timers
+		res.allocate(t.getNumCpus(), t.getMemoryInMbs());
+		t.allocate();
+		res.workingQueue.running.put(t.getId(), t);
+
+		logger.info("Allocated {}", t.getId());
+
+		ScheduleTimeout tout = new ScheduleTimeout(t.getTimeToHoldResource());
+		tout.setTimeoutEvent(new TaskDone(tout, t.getId()));
+		trigger(tout, timerPort);
 	}
 
 }

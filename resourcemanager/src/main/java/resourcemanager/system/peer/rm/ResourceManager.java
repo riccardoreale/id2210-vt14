@@ -16,9 +16,8 @@ import org.slf4j.LoggerFactory;
 
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.RmWorker;
-import resourcemanager.system.peer.rm.task.WorkerInit;
-import resourcemanager.system.peer.rm.task.WorkerPort;
 import resourcemanager.system.peer.rm.task.Task;
+import resourcemanager.system.peer.rm.task.WorkerInit;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -164,7 +163,7 @@ public final class ResourceManager extends ComponentDefinition {
 			// receive a new list of neighbours
 			neighbours.clear();
 			// TODO: addAll when cyclon is fixed
-			// neighbours.addAll(event.getSample());
+			neighbours.addAll(event.getSample());
 
 		}
 	};
@@ -237,7 +236,8 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Probing.Request> handleProbingRequest = new Handler<Probing.Request>() {
 		@Override
 		public void handle(Probing.Request event) {
-			assert false : "ok, we got";
+			// assert false : "ok, we got";
+			System.err.println("ok we got");
 		}
 	};
 
@@ -261,9 +261,8 @@ public final class ResourceManager extends ComponentDefinition {
 			 * event.getTimeToHoldResource()),
 			 * worker.getNegative(WorkerPort.class));
 			 */
-			Task t = new Task(event.getId(), event.getNumCpus(), event.getMemoryInMbs(),
-				event.getTimeToHoldResource()
-			);
+			Task t = new Task(event.getId(), event.getNumCpus(),
+					event.getMemoryInMbs(), event.getTimeToHoldResource());
 			probe(t);
 		}
 	};
