@@ -183,7 +183,7 @@ public final class ResourceManager extends ComponentDefinition {
 		};
 
 		/* Select only among nodes which can satisfy this task */
-		List<PeerCap> sel = FuncTools.filter(neighbours, p);
+		List<PeerCap> sel = FuncTools.filter(p, neighbours);
 		Collections.shuffle(sel);
 
 		int put = PROBES_PER_JOB; // × t.njobs
@@ -236,8 +236,8 @@ public final class ResourceManager extends ComponentDefinition {
 
 	private final Handler<Probing.Request> handleProbingRequest = new Handler<Probing.Request>() {
 		@Override
-		public void handle(Request event) {
-			// TODO: enqueue. Then when dequeued emit Probing.Response
+		public void handle(Probing.Request event) {
+			assert false : "ok, we got";
 		}
 	};
 
