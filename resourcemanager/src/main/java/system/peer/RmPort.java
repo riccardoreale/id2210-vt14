@@ -1,7 +1,7 @@
 package system.peer;
 
 import common.simulation.ClientRequestResource;
-import resourcemanager.system.peer.rm.AllocateResources;
+import resourcemanager.system.peer.rm.Resources;
 import se.sics.kompics.PortType;
 
 public class RmPort extends PortType {{

@@ -1,8 +1,9 @@
 package resourcemanager.system.peer.rm.task;
 
-import resourcemanager.system.peer.rm.AllocateResources;
+import resourcemanager.system.peer.rm.Resources;
 import se.sics.kompics.PortType;
 
 public class WorkerPort extends PortType {{
-	positive(AllocateResources.class);
+	positive(Resources.Allocate.class);
+	positive(Resources.Reserve.class);
 }}
