@@ -15,6 +15,8 @@ public class AvailableResourcesImpl implements AvailableResources {
 
 	volatile int numFreeCpus;
 	volatile int freeMemInMbs;
+	private int totalCpus;
+	private int totalMemory;
 
 	WorkingQueue workingQueue;
 
@@ -22,6 +24,8 @@ public class AvailableResourcesImpl implements AvailableResources {
 		this.numFreeCpus = numFreeCpus;
 		this.freeMemInMbs = freeMemInMbs;
 		this.workingQueue = new WorkingQueue();
+		this.totalCpus = numFreeCpus;
+		this.totalMemory = freeMemInMbs;
 	}
 
 	public synchronized boolean isAvailable(int numCpus, int memInMbs) {
@@ -62,5 +66,15 @@ public class AvailableResourcesImpl implements AvailableResources {
 		else
 			return workingQueue.getWorkingQueueTime(numFreeCpus, freeMemInMbs,
 					numCpus, memInMbs);
+	}
+
+	@Override
+	public int getTotalCpus() {
+		return totalCpus;
+	}
+
+	@Override
+	public int getTotalMemory() {
+		return totalMemory;
 	}
 }

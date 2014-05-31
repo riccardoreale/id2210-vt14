@@ -134,8 +134,8 @@ public final class ResourceManager extends ComponentDefinition {
 			if (neighbours.isEmpty()) {
 				return;
 			}
-			PeerCap dest = neighbours.get(random.nextInt(neighbours.size()));
-
+			Address dest = neighbours.get(random.nextInt(neighbours.size()))
+					.getAddress();
 		}
 	};
 
@@ -176,8 +176,8 @@ public final class ResourceManager extends ComponentDefinition {
 		Proposition<PeerCap> p = new Proposition<PeerCap>() {
 			@Override
 			public boolean eval(PeerCap param) {
-				return param.memoryMb >= t.getMemoryInMbs()
-						&& param.nCpus >= t.getNumCpus()
+				return param.maxMemory >= t.getMemoryInMbs()
+						&& param.maxCpu >= t.getNumCpus()
 						&& !outstanding.containsKey(param.address);
 			}
 		};

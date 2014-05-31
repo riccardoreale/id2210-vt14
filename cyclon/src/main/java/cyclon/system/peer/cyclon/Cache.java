@@ -1,6 +1,5 @@
 package cyclon.system.peer.cyclon;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -8,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+
 import se.sics.kompics.address.Address;
 
 public class Cache {
@@ -15,7 +15,8 @@ public class Cache {
 		public int compare(ViewEntry o1, ViewEntry o2) {
 			if (o1.getDescriptor().getAge() > o2.getDescriptor().getAge()) {
 				return 1;
-			} else if (o1.getDescriptor().getAge() < o2.getDescriptor().getAge()) {
+			} else if (o1.getDescriptor().getAge() < o2.getDescriptor()
+					.getAge()) {
 				return -1;
 			} else {
 				return 0;
@@ -23,13 +24,11 @@ public class Cache {
 		}
 	};
 
-
 	private final int size;
 	private final Address self;
 	private ArrayList<ViewEntry> entries;
 	private HashMap<Address, ViewEntry> d2e;
 	private Random random = new Random(10);
-
 
 	public Cache(int size, Address self) {
 		super();
@@ -39,13 +38,11 @@ public class Cache {
 		this.d2e = new HashMap<Address, ViewEntry>();
 	}
 
-
 	public void incrementDescriptorAges() {
 		for (ViewEntry entry : entries) {
 			entry.getDescriptor().incrementAndGetAge();
 		}
 	}
-
 
 	public Address selectPeerToShuffleWith() {
 		if (entries.isEmpty()) {
@@ -53,11 +50,11 @@ public class Cache {
 		}
 		ViewEntry oldestEntry = Collections.max(entries, comparatorByAge);
 		removeEntry(oldestEntry);
-		return oldestEntry.getDescriptor().getAddress();
+		return oldestEntry.getDescriptor().getPeerCap().getAddress();
 	}
 
-
-	public ArrayList<PeerDescriptor> selectToSendAtActive(int count, Address destinationPeer) {
+	public ArrayList<PeerDescriptor> selectToSendAtActive(int count,
+			Address destinationPeer) {
 		ArrayList<ViewEntry> randomEntries = generateRandomSample(count);
 
 		ArrayList<PeerDescriptor> descriptors = new ArrayList<PeerDescriptor>();
@@ -65,23 +62,22 @@ public class Cache {
 			cacheEntry.sentTo(destinationPeer);
 			descriptors.add(cacheEntry.getDescriptor());
 		}
-		
+
 		return descriptors;
 	}
 
-
-	public ArrayList<PeerDescriptor> selectToSendAtPassive(int count, Address destinationPeer) {
+	public ArrayList<PeerDescriptor> selectToSendAtPassive(int count,
+			Address destinationPeer) {
 		ArrayList<ViewEntry> randomEntries = generateRandomSample(count);
 		ArrayList<PeerDescriptor> descriptors = new ArrayList<PeerDescriptor>();
-		
+
 		for (ViewEntry cacheEntry : randomEntries) {
 			cacheEntry.sentTo(destinationPeer);
 			descriptors.add(cacheEntry.getDescriptor());
 		}
-		
+
 		return descriptors;
 	}
-
 
 	public void selectToKeep(Address from, ArrayList<PeerDescriptor> descriptors) {
 		LinkedList<ViewEntry> entriesSentToThisPeer = new LinkedList<ViewEntry>();
@@ -92,14 +88,14 @@ public class Cache {
 		}
 
 		for (PeerDescriptor descriptor : descriptors) {
-			if (self.equals(descriptor.getAddress())) {
+			if (self.equals(descriptor.getPeerCap().getAddress())) {
 				// do not keep descriptor of self
 				continue;
 			}
 
-			if (d2e.containsKey(descriptor.getAddress())) {
+			if (d2e.containsKey(descriptor.getPeerCap().getAddress())) {
 				// we already have an entry for this peer. keep the youngest one
-				ViewEntry entry = d2e.get(descriptor.getAddress());
+				ViewEntry entry = d2e.get(descriptor.getPeerCap().getAddress());
 				if (entry.getDescriptor().getAge() > descriptor.getAge()) {
 					// we keep the lowest age descriptor
 					removeEntry(entry);
@@ -109,13 +105,13 @@ public class Cache {
 					continue;
 				}
 			}
-			
+
 			if (entries.size() < size) {
 				// fill an empty slot
 				addEntry(new ViewEntry(descriptor));
 				continue;
 			}
-			
+
 			// replace one slot out of those sent to this peer
 			ViewEntry sentEntry = entriesSentToThisPeer.poll();
 			if (sentEntry != null) {
@@ -125,28 +121,26 @@ public class Cache {
 		}
 	}
 
-
 	public final ArrayList<PeerDescriptor> getAll() {
 		ArrayList<PeerDescriptor> descriptors = new ArrayList<PeerDescriptor>();
 
 		for (ViewEntry cacheEntry : entries)
 			descriptors.add(cacheEntry.getDescriptor());
-		
+
 		return descriptors;
 	}
-
 
 	public final List<Address> getRandomPeers(int count) {
 		ArrayList<ViewEntry> randomEntries = generateRandomSample(count);
 		LinkedList<Address> randomPeers = new LinkedList<Address>();
 
 		for (ViewEntry cacheEntry : randomEntries) {
-			randomPeers.add(cacheEntry.getDescriptor().getAddress());
+			randomPeers.add(cacheEntry.getDescriptor().getPeerCap()
+					.getAddress());
 		}
 
 		return randomPeers;
 	}
-
 
 	private final ArrayList<ViewEntry> generateRandomSample(int n) {
 		ArrayList<ViewEntry> randomEntries;
@@ -172,23 +166,21 @@ public class Cache {
 		return randomEntries;
 	}
 
-
 	private void addEntry(ViewEntry entry) {
 		entries.add(entry);
-		d2e.put(entry.getDescriptor().getAddress(), entry);
+		d2e.put(entry.getDescriptor().getPeerCap().getAddress(), entry);
 		checkSize();
 	}
-
 
 	private void removeEntry(ViewEntry entry) {
 		entries.remove(entry);
-		d2e.remove(entry.getDescriptor().getAddress());
+		d2e.remove(entry.getDescriptor().getPeerCap().getAddress());
 		checkSize();
 	}
 
-
 	private void checkSize() {
 		if (entries.size() != d2e.size())
-			throw new RuntimeException("WHD " + entries.size() + " <> " + d2e.size());
+			throw new RuntimeException("WHD " + entries.size() + " <> "
+					+ d2e.size());
 	}
 }
