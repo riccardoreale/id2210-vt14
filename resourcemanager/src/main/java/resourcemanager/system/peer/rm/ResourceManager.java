@@ -14,7 +14,6 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import resourcemanager.system.peer.rm.Probing.Request;
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.RmWorker;
 import resourcemanager.system.peer.rm.task.WorkerInit;
@@ -165,12 +164,12 @@ public final class ResourceManager extends ComponentDefinition {
 			// receive a new list of neighbours
 			neighbours.clear();
 			// TODO: addAll when cyclon is fixed
-			//neighbours.addAll(event.getSample());
+			// neighbours.addAll(event.getSample());
 
 		}
 	};
 
-	public void subscribe(final Task t) {
+	public void probe(final Task t) {
 		assert !waiting.contains(t);
 		waiting.add(t);
 
@@ -194,6 +193,10 @@ public final class ResourceManager extends ComponentDefinition {
 
 			outstanding.put(cap.address, cap);
 			trigger(new Probing.Request(self, cap.address), networkPort);
+		}
+
+		if (put > 0) {
+			logger.warn("I don't know enough peers: need {} more", put);
 		}
 	}
 
@@ -252,9 +255,16 @@ public final class ResourceManager extends ComponentDefinition {
 			// event.getNumCpus(), event.getMemoryInMbs());
 			// trigger(req, networkPort);
 
-			trigger(new AllocateResources(event.getId(), event.getNumCpus(),
-					event.getMemoryInMbs(), event.getTimeToHoldResource()),
-					worker.getNegative(WorkerPort.class));
+			/*
+			 * // Direct allocation trigger(new AllocateResources(event.getId(),
+			 * event.getNumCpus(), event.getMemoryInMbs(),
+			 * event.getTimeToHoldResource()),
+			 * worker.getNegative(WorkerPort.class));
+			 */
+			Task t = new Task(event.getId(), event.getNumCpus(), event.getMemoryInMbs(),
+				event.getTimeToHoldResource()
+			);
+			probe(t);
 		}
 	};
 
