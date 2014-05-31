@@ -164,8 +164,7 @@ public class Prober extends ComponentDefinition {
 		}
 	}
 
-	/* TODO: not subscribed yet! */
-	private Handler<Response> handleResponse = new Handler<Prober.Response>() {
+	public final Handler<Response> handleResponse = new Handler<Prober.Response>() {
 		@Override
 		public void handle(Response resp) {
 			Address peer = resp.getSource();
