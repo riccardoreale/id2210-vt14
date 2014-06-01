@@ -1,6 +1,8 @@
 package resourcemanager.system.peer.rm;
 
+import resourcemanager.system.peer.rm.task.Task;
 import se.sics.kompics.Event;
+import se.sics.kompics.address.Address;
 
 public class Resources {
 
@@ -29,23 +31,41 @@ public class Resources {
 	}
 
 	public static class Reserve extends Base {
-		public Reserve(long id, int numCpus, int memoryInMbs) {
-			super(id, numCpus, memoryInMbs);
+		public final Address taskMaster;
+
+		public Reserve(Task t, Address taskMaster) {
+			super(t.getId(), t.getNumCpus(), t.getMemoryInMbs());
+			this.taskMaster = taskMaster;
 		}
 	}
 
-	public static class Allocate extends Base {
-		private final int timeToHoldResource;
+	public static class Confirm extends Event {
+		public Task task;
+		public Address master;
 
-		public Allocate(long id, int numCpus, int memoryInMbs,
-						int timeToHoldResource) {
-			super(id, numCpus, memoryInMbs);
-			this.timeToHoldResource = timeToHoldResource;
+		public Confirm(Task t, Address master) {
+			this.task = t;
+			this.master = master;
 		}
+	}
 
-		public int getTimeToHoldResource() {
-			return timeToHoldResource;
+	public static class Allocate extends Event {
+		public long referencId;
+		public Task task;
+
+		public Allocate(long referenceId, Task t) {
+			this.referencId = referenceId;
+			this.task = t;
+
 		}
+	}
 
+	public static class Cancel extends Event {
+		public long referencId;
+
+		public Cancel(long referenceId) {
+			this.referencId = referenceId;
+
+		}
 	}
 }

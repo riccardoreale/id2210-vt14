@@ -5,7 +5,7 @@ import se.sics.kompics.address.Address;
 public class RmTask extends Task {
 
 	/* Unique identification of virtual task (probed) */
-	private Address taskMaster;
+	public Address taskMaster;
 	long localId;
 
 	private boolean executeDirectly = false;

@@ -10,7 +10,7 @@ public class Task {
 	protected final long id;
 	protected final int numCpus;
 	protected final int memoryInMbs;
-	protected final int timeToHoldResource;
+	protected int timeToHoldResource;
 
 	protected long enqueueTime;
 	protected long allocateTime;

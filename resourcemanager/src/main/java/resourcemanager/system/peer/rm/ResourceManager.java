@@ -18,16 +18,15 @@ import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.RmWorker;
 import resourcemanager.system.peer.rm.task.Task;
 import resourcemanager.system.peer.rm.task.WorkerInit;
+import resourcemanager.system.peer.rm.task.WorkerPort;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
-import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.address.Address;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.kompics.web.Web;
 import system.peer.RmPort;
 import tman.system.peer.tman.TManSample;
 import tman.system.peer.tman.TManSamplePort;
@@ -57,10 +56,11 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Positive<RmPort> indexPort = positive(RmPort.class);
 	private final Positive<Network> networkPort = positive(Network.class);
 	private final Positive<Timer> timerPort = positive(Timer.class);
-	private final Negative<Web> webPort = negative(Web.class);
 	private final Positive<CyclonSamplePort> cyclonSamplePort = positive(CyclonSamplePort.class);
 	private final Positive<TManSamplePort> tmanPort = positive(TManSamplePort.class);
+
 	private final ArrayList<PeerCap> neighbours = new ArrayList<PeerCap>();
+
 	private Address self;
 	private RmConfiguration configuration;
 	private Random random;
@@ -68,7 +68,7 @@ public final class ResourceManager extends ComponentDefinition {
 
 	/* Components for probing */
 	private final Queue<Task> waiting = new LinkedList<Task>();
-	private final Map<Address, PeerCap> outstanding = new HashMap<Address, PeerCap>();
+	private final Map<Address, Task> outstanding = new HashMap<Address, Task>();
 
 	// private AvailableResources availableResources;
 	// private TaskQueue queue;
@@ -92,14 +92,15 @@ public final class ResourceManager extends ComponentDefinition {
 		subscribe(handleCyclonSample, cyclonSamplePort);
 		subscribe(handleRequestResource, indexPort);
 		subscribe(handleUpdateTimeout, timerPort);
-		subscribe(handleResourceAllocationRequest, networkPort);
-		subscribe(handleResourceAllocationResponse, networkPort);
 		subscribe(handleProbingRequest, networkPort);
 		subscribe(handleProbingResponse, networkPort);
+		subscribe(handleProbingAllocate, networkPort);
+		subscribe(handleProbingCancel, networkPort);
 		subscribe(handleTManSample, tmanPort);
 
 		worker = create(RmWorker.class);
 		connect(timerPort, worker.getNegative(Timer.class));
+		subscribe(handleConfirmRequest, worker.getNegative(WorkerPort.class));
 	}
 
 	Handler<RmInit> handleInit = new Handler<RmInit>() {
@@ -138,22 +139,6 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	};
 
-	Handler<RequestResources.Request> handleResourceAllocationRequest = new Handler<RequestResources.Request>() {
-		@Override
-		public void handle(RequestResources.Request event) {
-			System.out
-					.println(self.getIp() + " - GOT RequestResources.Request");
-
-		}
-	};
-
-	Handler<RequestResources.Response> handleResourceAllocationResponse = new Handler<RequestResources.Response>() {
-		@Override
-		public void handle(RequestResources.Response event) {
-			// TODO
-		}
-	};
-
 	Handler<CyclonSample> handleCyclonSample = new Handler<CyclonSample>() {
 		@Override
 		public void handle(CyclonSample event) {
@@ -174,8 +159,7 @@ public final class ResourceManager extends ComponentDefinition {
 			@Override
 			public boolean eval(PeerCap param) {
 				return param.maxMemory >= t.getMemoryInMbs()
-						&& param.maxCpu >= t.getNumCpus()
-						&& !outstanding.containsKey(param.address);
+						&& param.maxCpu >= t.getNumCpus();
 			}
 		};
 
@@ -188,8 +172,8 @@ public final class ResourceManager extends ComponentDefinition {
 			if (put-- <= 0)
 				break;
 
-			outstanding.put(cap.address, cap);
-			trigger(new Probing.Request(self, cap.address), networkPort);
+			outstanding.put(cap.address, t);
+			trigger(new Probing.Request(self, cap.address, t), networkPort);
 		}
 
 		if (put > 0) {
@@ -197,25 +181,28 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	}
 
-	private void serve(Address peer, PeerCap cap) {
+	private void serve(Address peer, Task reserved) {
 		Iterator<Task> i = waiting.iterator();
 		boolean assigned = false;
 		while (i.hasNext() && !assigned) {
 			Task t = i.next();
-			if (cap.canRun(t.getNumCpus(), t.getMemoryInMbs())) {
+			if (reserved.getNumCpus() >= t.getNumCpus()
+					&& reserved.getMemoryInMbs() >= t.getMemoryInMbs()) {
 				i.remove();
 				assigned = true;
+
+				trigger(new Probing.Allocate(self, peer, reserved.getId(), t),
+						networkPort);
 			}
 		}
 
-		System.err.printf("serve(%s) -> assigned? %s\n", peer, assigned);
+		System.err
+				.printf("serve(%s) -> assigned? %s\n", peer.getIp(), assigned);
 
-		/* No waiting tasks left? Send cancellation */
-		if (waiting.isEmpty()) {
-			trigger(new Probing.Cancel(self, peer), networkPort);
-			for (Address to : outstanding.keySet()) {
-				trigger(new Probing.Cancel(self, to), networkPort);
-			}
+		// if we couldn't assign anything we cancel
+		if (!assigned) {
+			trigger(new Probing.Cancel(self, peer, reserved.getId()),
+					networkPort);
 		}
 	}
 
@@ -223,19 +210,52 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Response resp) {
 			Address peer = resp.getSource();
-			PeerCap cap = outstanding.remove(peer);
-			if (cap != null) {
-				serve(peer, cap);
+			Task t = outstanding.remove(peer);
+			if (t != null) {
+				serve(peer, t);
 			}
-			assert false : "Got orphan of a dead node";
 		}
 	};
 
 	private final Handler<Probing.Request> handleProbingRequest = new Handler<Probing.Request>() {
 		@Override
 		public void handle(Probing.Request event) {
-			// assert false : "ok, we got";
-			System.err.println("ok we got");
+
+			trigger(new Resources.Reserve(event.task, event.getSource()),
+					worker.getNegative(WorkerPort.class));
+
+		}
+	};
+
+	private final Handler<Probing.Allocate> handleProbingAllocate = new Handler<Probing.Allocate>() {
+		@Override
+		public void handle(Probing.Allocate event) {
+
+			System.err.println(self.getIp() + " GOT ALLOCATE FOR "
+					+ event.task.getId());
+			trigger(new Resources.Allocate(event.refId, event.task),
+					worker.getNegative(WorkerPort.class));
+		}
+	};
+
+	private final Handler<Probing.Cancel> handleProbingCancel = new Handler<Probing.Cancel>() {
+		@Override
+		public void handle(Probing.Cancel event) {
+
+			System.err.println(self.getIp() + " GOT cancel FOR " + event.refId);
+
+			trigger(new Resources.Cancel(event.refId),
+					worker.getNegative(WorkerPort.class));
+		}
+	};
+
+	private final Handler<Resources.Confirm> handleConfirmRequest = new Handler<Resources.Confirm>() {
+		@Override
+		public void handle(Resources.Confirm event) {
+
+			trigger(new Probing.Response(self, event.master, event.task),
+					networkPort);
+
 		}
 	};
 
