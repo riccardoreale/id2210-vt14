@@ -50,7 +50,7 @@ public final class RmConfiguration {
         p.setProperty("numPartitions", "" + numPartitions);
         p.setProperty("maxNumRoutingEntries", "" + maxNumRoutingEntries);
         p.setProperty("seed", "" + seed);
-        p.setProperty("omniscent", Boolean.toString(this.omniscent));
+        p.setProperty("omniscent", Boolean.toString(this.isOmniscent()));
 
         Writer writer = new FileWriter(file);
         p.store(writer, "se.sics.kompics.p2p.overlay.application");
@@ -69,4 +69,8 @@ public final class RmConfiguration {
 
         return new RmConfiguration(period, numPartitions, maxNumRoutingEntries, seed, omniscent);
     }
+
+	public boolean isOmniscent() {
+		return omniscent;
+	}
 }

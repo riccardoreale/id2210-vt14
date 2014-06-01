@@ -104,7 +104,8 @@ public final class Cyclon extends ComponentDefinition {
 				.selectToSendAtActive(shuffleSize - 1, randomPeer);
 		randomDescriptors.add(new PeerDescriptor(new PeerCap(self,
 				availableResources.getTotalCpus(), availableResources
-						.getTotalMemory())));
+						.getTotalMemory(), availableResources.getNumFreeCpus(),
+				availableResources.getFreeMemInMbs())));
 		DescriptorBuffer randomBuffer = new DescriptorBuffer(self,
 				randomDescriptors);
 
