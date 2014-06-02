@@ -11,14 +11,15 @@ public class Main {
 	public static void main(String[] args) throws Throwable {
 		// TODO - change the random seed, have the user pass it in.
 
-		boolean omniscent = false;
-		if (args.length > 0) {
-			omniscent = Boolean.parseBoolean(args[0]);
-		}
-		System.err.printf("Omniscent: %s\n", omniscent);
+		boolean omniscent = Boolean.parseBoolean(args[0]);
+		long seed = Long.parseLong(args[1]);
+		float load = Float.parseFloat(args[2]);
+		int probes = Integer.parseInt(args[3]);
 
-		long seed = 2000;// System.currentTimeMillis();
-		Configuration configuration = new Configuration(seed, omniscent);
+		Configuration configuration = new Configuration(seed, omniscent,
+				probes, load);
+
+		Scenario1.generateScenario(load);
 
 		Scenario scenario = new Scenario1();
 		scenario.setSeed(seed);

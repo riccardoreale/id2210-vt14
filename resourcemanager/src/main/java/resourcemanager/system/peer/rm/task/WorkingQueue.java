@@ -14,7 +14,7 @@ public class WorkingQueue {
 
 	Map<Long, Task> running = new HashMap<Long, Task>();
 	Queue<TaskPlaceholder> waiting = new LinkedList<TaskPlaceholder>();
-	List<Task> done = new LinkedList<Task>();
+	private List<Task> done = new LinkedList<Task>();
 
 	public int getWorkingQueueTime(int tmpCpu, int tmpMem, int numCpus,
 			int memInMbs) {
@@ -79,6 +79,10 @@ public class WorkingQueue {
 		// happened). anyhow we return "infinite" time
 		return Integer.MAX_VALUE;
 
+	}
+
+	public List<Task> getDone() {
+		return done;
 	}
 
 }

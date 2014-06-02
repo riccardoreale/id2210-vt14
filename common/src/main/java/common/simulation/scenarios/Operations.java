@@ -7,6 +7,7 @@ import se.sics.kompics.p2p.experiment.dsl.adaptor.Operation4;
 import se.sics.kompics.p2p.experiment.dsl.events.TerminateExperiment;
 
 import common.simulation.ClientRequestResource;
+import common.simulation.Evaluate;
 import common.simulation.PeerFail;
 import common.simulation.PeerJoin;
 
@@ -21,6 +22,13 @@ public class Operations {
 			}
 		};
 	}
+
+	public static Operation<Evaluate> evaluate = new Operation<Evaluate>() {
+		@Override
+		public Evaluate generate() {
+			return new Evaluate();
+		}
+	};
 
 	public static Operation1<PeerFail, Long> peerFail = new Operation1<PeerFail, Long>() {
 		@Override

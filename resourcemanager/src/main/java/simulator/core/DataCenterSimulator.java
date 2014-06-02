@@ -6,12 +6,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import se.sics.ipasdistances.AsIpGenerator;
 import se.sics.kompics.ChannelFilter;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
+import se.sics.kompics.Kompics;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.Stop;
@@ -34,6 +38,7 @@ import common.configuration.RmConfiguration;
 import common.configuration.TManConfiguration;
 import common.simulation.ClientRequestResource;
 import common.simulation.ConsistentHashtable;
+import common.simulation.Evaluate;
 import common.simulation.GenerateReport;
 import common.simulation.PeerFail;
 import common.simulation.PeerJoin;
@@ -41,6 +46,9 @@ import common.simulation.SimulatorInit;
 import common.simulation.SimulatorPort;
 
 public final class DataCenterSimulator extends ComponentDefinition {
+
+	private static final Logger log = LoggerFactory
+			.getLogger(DataCenterSimulator.class);
 
 	private class Pair<X, Y> {
 		public final X fst;
@@ -76,6 +84,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		subscribe(handleGenerateReport, timer);
 		subscribe(handlePeerJoin, simulator);
 		subscribe(handlePeerFail, simulator);
+		subscribe(handleEvaluateExperiment, simulator);
 		subscribe(handleTerminateExperiment, simulator);
 		subscribe(handleRequestResource, simulator);
 	}
@@ -92,6 +101,8 @@ public final class DataCenterSimulator extends ComponentDefinition {
 			dataCenterConfiguration = init.getDataCenterConfiguration();
 			identifierSpaceSize = cyclonConfiguration.getIdentifierSpaceSize();
 
+			Snapshot.init(rmConfiguration.getProbes(),
+					dataCenterConfiguration.load);
 			// generate periodic report
 			int snapshotPeriod = Configuration.SNAPSHOT_PERIOD;
 			SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(
@@ -106,7 +117,6 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		@Override
 		public void handle(ClientRequestResource event) {
 			Component peer = null;
-			System.err.println("GENERATED " + event.getId());
 			if (dataCenterConfiguration.omniscent) {
 				peer = omniscentSelector(event.getNumCpus(),
 						event.getMemoryInMbs());
@@ -187,18 +197,26 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		}
 	};
 
+	Handler<Evaluate> handleEvaluateExperiment = new Handler<Evaluate>() {
+		@Override
+		public void handle(Evaluate event) {
+			Snapshot.evaluate();
+		}
+	};
+
 	Handler<TerminateExperiment> handleTerminateExperiment = new Handler<TerminateExperiment>() {
 		@Override
 		public void handle(TerminateExperiment event) {
-			System.err.println("Finishing experiment - terminating....");
-			System.exit(0);
+			log.info("Finishing experiment - terminating....");
+			Kompics.shutdown();
+			// System.exit(0);
 		}
 	};
 
 	Handler<GenerateReport> handleGenerateReport = new Handler<GenerateReport>() {
 		@Override
 		public void handle(GenerateReport event) {
-			Snapshot.report();
+			// Snapshot.report();
 		}
 	};
 

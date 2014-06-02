@@ -49,9 +49,7 @@ import cyclon.system.peer.cyclon.PeerDescriptor;
  */
 public final class ResourceManager extends ComponentDefinition {
 
-	private static final int PROBES_PER_JOB = 1;
-
-	private static final Logger logger = LoggerFactory
+	private static final Logger log = LoggerFactory
 			.getLogger(ResourceManager.class);
 
 	private final Positive<RmPort> indexPort = positive(RmPort.class);
@@ -169,7 +167,7 @@ public final class ResourceManager extends ComponentDefinition {
 		List<PeerCap> sel = FuncTools.filter(p, neighbours);
 		// Collections.shuffle(sel, random);
 
-		int put = PROBES_PER_JOB; // × t.njobs
+		int put = configuration.getProbes(); // × t.njobs
 		for (PeerCap cap : sel) {
 			if (put-- <= 0)
 				break;
@@ -178,9 +176,9 @@ public final class ResourceManager extends ComponentDefinition {
 			trigger(new Probing.Request(self, cap.address, t), networkPort);
 		}
 
-		if (put > 0) {
-			logger.warn("I don't know enough peers: need {} more", put);
-		}
+		// if (put > 0) {
+		// log.warn("I don't know enough peers: need {} more", put);
+		// }
 	}
 
 	private void serve(Address peer, Task reserved) {
@@ -198,9 +196,6 @@ public final class ResourceManager extends ComponentDefinition {
 			}
 		}
 
-		System.err
-				.printf("serve(%s) -> assigned? %s\n", peer.getIp(), assigned);
-
 		// if we couldn't assign anything we cancel
 		// but only if that peer hasn't been already assigned for
 		// that same task on a previous iteration
@@ -217,7 +212,7 @@ public final class ResourceManager extends ComponentDefinition {
 		public void handle(Probing.Response resp) {
 
 			TaskPlaceholder t = getOustanding(resp.getSource(), resp.id);
-			System.err.println(self.getIp() + " GOT RESPONSE FROM "
+			log.debug(self.getIp() + " GOT RESPONSE FROM "
 					+ resp.getSource().getIp() + " FOR " + t.getId());
 			if (t != null) {
 				serve(resp.getSource(), t);
@@ -251,8 +246,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Request event) {
 
-			System.err.println(self.getIp() + " GOT PROBE FOR "
-					+ event.task.getId());
+			log.debug(self.getIp() + " GOT PROBE FOR " + event.task.getId());
 			trigger(new Resources.Reserve(event.task),
 					worker.getNegative(WorkerPort.class));
 
@@ -263,8 +257,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Allocate event) {
 
-			System.err.println(self.getIp() + " GOT ALLOCATE FOR "
-					+ event.task.getId());
+			log.debug(self.getIp() + " GOT ALLOCATE FOR " + event.task.getId());
 			trigger(new Resources.Allocate(event.referenceId, event.task),
 					worker.getNegative(WorkerPort.class));
 		}
@@ -274,7 +267,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Cancel event) {
 
-			System.err.println(self.getIp() + " GOT cancel FOR " + event.refId);
+			log.debug(self.getIp() + " GOT cancel FOR " + event.refId);
 
 			trigger(new Resources.Cancel(event.refId),
 					worker.getNegative(WorkerPort.class));
@@ -284,7 +277,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Resources.Confirm> handleConfirmRequest = new Handler<Resources.Confirm>() {
 		@Override
 		public void handle(Resources.Confirm event) {
-			System.err.println(self.getIp() + " REQUESTING CONFIRMATION");
+			log.debug(self.getIp() + " REQUESTING CONFIRMATION");
 			trigger(new Probing.Response(self, event.getTask().getTaskMaster(),
 					event.getTask().getId()), networkPort);
 
@@ -295,7 +288,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(ClientRequestResource event) {
 
-			System.err.println(self.getIp() + " allocating " + event.getId()
+			log.debug(self.getIp() + " allocating " + event.getId()
 					+ " resources: " + event.getNumCpus() + " + "
 					+ event.getMemoryInMbs() + " ("
 					+ event.getTimeToHoldResource() + ")");

@@ -16,7 +16,7 @@ import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
 public class RmWorker extends ComponentDefinition {
-	private static final Logger logger = LoggerFactory
+	private static final Logger log = LoggerFactory
 			.getLogger(RmWorker.class);
 
 	Positive<Timer> timerPort = positive(Timer.class);
@@ -48,7 +48,7 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Reserve> handleReserve = new Handler<Resources.Reserve>() {
 		@Override
 		public void handle(Resources.Reserve event) {
-			System.err.println(System.currentTimeMillis() + " "
+			log.debug(System.currentTimeMillis() + " "
 					+ event.getTask().getId());
 			res.workingQueue.waiting.add(event.getTask());
 
@@ -75,7 +75,7 @@ public class RmWorker extends ComponentDefinition {
 				runTask(event.task);
 
 			} else
-				System.err.println("AAAA");
+				log.debug("AAAA");
 		}
 	};
 
@@ -90,10 +90,10 @@ public class RmWorker extends ComponentDefinition {
 				res.release(remove.getNumCpus(), remove.getMemoryInMbs());
 				res.workingQueue.running.remove(remove.getId());
 
-				System.err.println(self.getIp() + " REMOVED " + remove.getId());
+				log.debug(self.getIp() + " REMOVED " + remove.getId());
 
 			} else
-				System.err.println("CCCC");
+				log.debug("CCCC");
 		}
 	};
 
@@ -102,12 +102,12 @@ public class RmWorker extends ComponentDefinition {
 		public void handle(TaskDone event) {
 			Task t = (Task) res.workingQueue.running.remove(event.id);
 			if (t == null)
-				System.err.println(self.getIp() + " " + event.id);
+				log.debug(self.getIp() + " " + event.id);
 			assert t != null;
 			t.deallocate();
 			res.release(t.getNumCpus(), t.getMemoryInMbs());
-			res.workingQueue.done.add(t);
-			logger.info(
+			res.workingQueue.getDone().add(t);
+			log.info(
 					"Done {}, QueueTime={}, TotalTime={}",
 					new Object[] {
 							t.getId(),
@@ -151,13 +151,13 @@ public class RmWorker extends ComponentDefinition {
 
 		res.workingQueue.running.put(placeholder.getId(), placeholder);
 
-		logger.info("Allocated {}", placeholder.getId());
+		log.info("Allocated {}", placeholder.getId());
 
 		runTask(placeholder);
 	}
 
 	private void runTask(Task t) {
-		System.err.println(self.getIp() + " RUNNING " + t.getId() + " ("
+		log.debug(self.getIp() + " RUNNING " + t.getId() + " ("
 				+ res.numFreeCpus + "/" + res.freeMemInMbs + ")");
 		t.allocate();
 		ScheduleTimeout tout = new ScheduleTimeout(t.getTimeToHoldResource());

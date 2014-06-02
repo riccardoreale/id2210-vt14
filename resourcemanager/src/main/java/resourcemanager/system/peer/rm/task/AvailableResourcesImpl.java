@@ -68,6 +68,10 @@ public class AvailableResourcesImpl implements AvailableResources {
 					numCpus, memInMbs);
 	}
 
+	public WorkingQueue getWorkingQueue() {
+		return workingQueue;
+	}
+
 	@Override
 	public int getTotalCpus() {
 		return totalCpus;
