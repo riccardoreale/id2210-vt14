@@ -2,16 +2,17 @@ package resourcemanager.system.peer.rm.task;
 
 import se.sics.kompics.address.Address;
 
-public class RmTask extends Task {
+public class TaskPlaceholder extends Task {
 
 	/* Unique identification of virtual task (probed) */
 	public Address taskMaster;
-	long localId;
+	public boolean executeDirectly = false;
 
-	private boolean executeDirectly = false;
-
-	public RmTask(long id, int numCpus, int memoryInMbs, int timeToHoldResource) {
+	public TaskPlaceholder(long id, int numCpus, int memoryInMbs,
+			int timeToHoldResource, Address taskMaster) {
 		super(id, numCpus, memoryInMbs, timeToHoldResource);
+		this.taskMaster = taskMaster;
+
 	}
 
 	public Address getTaskMaster() {

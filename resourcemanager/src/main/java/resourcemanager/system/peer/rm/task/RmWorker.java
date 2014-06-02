@@ -11,6 +11,7 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
+import se.sics.kompics.address.Address;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
@@ -23,8 +24,9 @@ public class RmWorker extends ComponentDefinition {
 	Negative<WorkerPort> workerPort2 = negative(WorkerPort.class);
 
 	private AvailableResourcesImpl res = null;
+	private Address self;
 
-	private Map<Long, RmTask> waitingConfirmation = new HashMap<Long, RmTask>();
+	private Map<Long, TaskPlaceholder> waitingConfirmation = new HashMap<Long, TaskPlaceholder>();
 
 	public RmWorker() {
 		subscribe(handleInit, control);
@@ -35,8 +37,10 @@ public class RmWorker extends ComponentDefinition {
 	}
 
 	Handler<WorkerInit> handleInit = new Handler<WorkerInit>() {
+
 		@Override
 		public void handle(WorkerInit init) {
+			self = init.getPeerSelf();
 			res = init.getAvailableResources();
 		}
 	};
@@ -44,11 +48,9 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Reserve> handleReserve = new Handler<Resources.Reserve>() {
 		@Override
 		public void handle(Resources.Reserve event) {
-			RmTask t = new RmTask(event.getId(), event.getNumCpus(),
-					event.getMemoryInMbs(), 0);
-			t.taskMaster = event.taskMaster;
-			res.workingQueue.waiting.add(t);
-			t.queue();
+			System.err.println(System.currentTimeMillis() + " "
+					+ event.getTask().getId());
+			res.workingQueue.waiting.add(event.getTask());
 
 			pop();
 		}
@@ -59,13 +61,19 @@ public class RmWorker extends ComponentDefinition {
 		public void handle(Resources.Allocate event) {
 			if (waitingConfirmation.containsKey(event.referencId)) {
 
-				if (event.task.getId() == event.referencId) {
+				TaskPlaceholder placeholder = waitingConfirmation
+						.get(event.referencId);
+				res.release(placeholder.getNumCpus(),
+						placeholder.getMemoryInMbs());
 
-					RmTask toRun = waitingConfirmation.get(event.referencId);
-					toRun.timeToHoldResource = event.task.timeToHoldResource;
-					runTask(toRun);
-				} else
-					System.err.println("BBBB ");
+				res.allocate(event.getTask().getNumCpus(), event.getTask()
+						.getMemoryInMbs());
+
+				res.workingQueue.running.put(event.getTask().getId(),
+						event.task);
+
+				runTask(event.task);
+
 			} else
 				System.err.println("AAAA");
 		}
@@ -76,12 +84,13 @@ public class RmWorker extends ComponentDefinition {
 		public void handle(Resources.Cancel event) {
 			if (waitingConfirmation.containsKey(event.referencId)) {
 
-				RmTask remove = waitingConfirmation.remove(event.referencId);
+				TaskPlaceholder remove = waitingConfirmation
+						.remove(event.referencId);
 
 				res.release(remove.getNumCpus(), remove.getMemoryInMbs());
 				res.workingQueue.running.remove(remove.getId());
 
-				System.err.println("REMOVED " + remove.getId());
+				System.err.println(self.getIp() + " REMOVED " + remove.getId());
 
 			} else
 				System.err.println("CCCC");
@@ -91,7 +100,9 @@ public class RmWorker extends ComponentDefinition {
 	Handler<TaskDone> handleTaskDone = new Handler<TaskDone>() {
 		@Override
 		public void handle(TaskDone event) {
-			RmTask t = (RmTask) res.workingQueue.running.remove(event.id);
+			Task t = (Task) res.workingQueue.running.remove(event.id);
+			if (t == null)
+				System.err.println(self.getIp() + " " + event.id);
 			assert t != null;
 			t.deallocate();
 			res.release(t.getNumCpus(), t.getMemoryInMbs());
@@ -110,12 +121,13 @@ public class RmWorker extends ComponentDefinition {
 	};
 
 	private void pop() {
-		RmTask t = (RmTask) res.workingQueue.waiting.peek();
+		TaskPlaceholder t = (TaskPlaceholder) res.workingQueue.waiting.peek();
 		if (t == null)
 			return;
 
 		if (res.isAvailable(t.getNumCpus(), t.getMemoryInMbs())) {
 			res.workingQueue.waiting.poll();
+
 			if (t.isExecuteDirectly())
 				allocateDirectly(t);
 			else
@@ -123,30 +135,30 @@ public class RmWorker extends ComponentDefinition {
 		}
 	}
 
-	private void getConfirm(RmTask t) {
+	private void getConfirm(TaskPlaceholder t) {
 		// here we temporary block resources
 		// and ask for confirmation
 		res.allocate(t.getNumCpus(), t.getMemoryInMbs());
-		res.workingQueue.running.put(t.getId(), t);
 		waitingConfirmation.put(t.id, t);
 
-		// TODO ask for confirmation
-		trigger(new Resources.Confirm(t, t.taskMaster), workerPort);
+		trigger(new Resources.Confirm(t), workerPort);
 
 	}
 
-	private void allocateDirectly(RmTask t) {
+	private void allocateDirectly(TaskPlaceholder placeholder) {
 		// here we allocate resources and start the timers
-		res.allocate(t.getNumCpus(), t.getMemoryInMbs());
-		res.workingQueue.running.put(t.getId(), t);
+		res.allocate(placeholder.getNumCpus(), placeholder.getMemoryInMbs());
 
-		logger.info("Allocated {}", t.getId());
+		res.workingQueue.running.put(placeholder.getId(), placeholder);
 
-		runTask(t);
+		logger.info("Allocated {}", placeholder.getId());
+
+		runTask(placeholder);
 	}
 
-	private void runTask(RmTask t) {
-		System.err.println("RUNNING " + t.getId());
+	private void runTask(Task t) {
+		System.err.println(self.getIp() + " RUNNING " + t.getId() + " ("
+				+ res.numFreeCpus + "/" + res.freeMemInMbs + ")");
 		t.allocate();
 		ScheduleTimeout tout = new ScheduleTimeout(t.getTimeToHoldResource());
 		tout.setTimeoutEvent(new TaskDone(tout, t.getId()));

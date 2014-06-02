@@ -17,7 +17,7 @@ public class Main {
 		}
 		System.err.printf("Omniscent: %s\n", omniscent);
 
-		long seed = System.currentTimeMillis();
+		long seed = 2000;// System.currentTimeMillis();
 		Configuration configuration = new Configuration(seed, omniscent);
 
 		Scenario scenario = new Scenario1();

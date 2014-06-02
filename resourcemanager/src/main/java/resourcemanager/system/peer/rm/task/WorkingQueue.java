@@ -13,7 +13,7 @@ import java.util.Queue;
 public class WorkingQueue {
 
 	Map<Long, Task> running = new HashMap<Long, Task>();
-	Queue<Task> waiting = new LinkedList<Task>();
+	Queue<TaskPlaceholder> waiting = new LinkedList<TaskPlaceholder>();
 	List<Task> done = new LinkedList<Task>();
 
 	public int getWorkingQueueTime(int tmpCpu, int tmpMem, int numCpus,
@@ -26,7 +26,7 @@ public class WorkingQueue {
 		final long now = System.currentTimeMillis();
 
 		// lists of running and waiting
-		Iterator<Task> waitingIterator = waiting.iterator();
+		Iterator<TaskPlaceholder> waitingIterator = waiting.iterator();
 		ArrayList<Task> listRunning = new ArrayList<Task>(running.values());
 		Task nextTask = null;
 
@@ -52,7 +52,7 @@ public class WorkingQueue {
 			// task
 			if (nextTask == null) {
 				if (waitingIterator.hasNext()) {
-					Task tmp = waitingIterator.next();
+					TaskPlaceholder tmp = waitingIterator.next();
 					nextTask = new Task(tmp.id, tmp.numCpus, tmp.memoryInMbs,
 							tmp.timeToHoldResource);
 				}

@@ -42,14 +42,14 @@ public class TestAvailableResourcesImpl {
 		for (int i = 0; i < 4; i++) {
 
 			res.allocate(2, 2);
-			Task task = new Task(i, 2, 2, 60000);
+			TaskPlaceholder task = new TaskPlaceholder(i, 2, 2, 60000, null);
 			task.allocateTime = now;
 			res.workingQueue.running.put((long) i, task);
 		}
 
 		for (int i = 0; i < 4; i++) {
 
-			Task task = new Task(i, 4, 2, 60000);
+			TaskPlaceholder task = new TaskPlaceholder(i, 4, 2, 60000, null);
 			res.workingQueue.waiting.add(task);
 		}
 

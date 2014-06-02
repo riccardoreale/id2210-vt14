@@ -1,27 +1,13 @@
 package resourcemanager.system.peer.rm.task;
 
-public class Task {
-
-	/*
-	 * Proposal: have *ONE* class containing {ncpus, memory, time, njobs} and
-	 * use internally to every class requiring this set of stuff. Including
-	 * task, assigned resources and so on
-	 */
-	protected final long id;
-	protected final int numCpus;
-	protected final int memoryInMbs;
-	protected int timeToHoldResource;
+public class Task extends TaskResources {
 
 	protected long enqueueTime;
 	protected long allocateTime;
 	protected long deallocateTime;
 
 	public Task(long id, int numCpus, int memoryInMbs, int timeToHoldResource) {
-		super();
-		this.id = id;
-		this.numCpus = numCpus;
-		this.memoryInMbs = memoryInMbs;
-		this.timeToHoldResource = timeToHoldResource;
+		super(id, numCpus, memoryInMbs, timeToHoldResource);
 		this.enqueueTime = -1;
 		this.allocateTime = -1;
 		this.deallocateTime = -1;
@@ -62,22 +48,6 @@ public class Task {
 			return false;
 		Task other = (Task) obj;
 		return id == other.id;
-	}
-
-	public long getId() {
-		return id;
-	}
-
-	public int getTimeToHoldResource() {
-		return timeToHoldResource;
-	}
-
-	public int getMemoryInMbs() {
-		return memoryInMbs;
-	}
-
-	public int getNumCpus() {
-		return numCpus;
 	}
 
 }

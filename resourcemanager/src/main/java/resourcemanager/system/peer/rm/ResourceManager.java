@@ -1,7 +1,6 @@
 package resourcemanager.system.peer.rm;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -10,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.RmWorker;
 import resourcemanager.system.peer.rm.task.Task;
+import resourcemanager.system.peer.rm.task.TaskPlaceholder;
 import resourcemanager.system.peer.rm.task.WorkerInit;
 import resourcemanager.system.peer.rm.task.WorkerPort;
 import se.sics.kompics.Component;
@@ -48,7 +49,7 @@ import cyclon.system.peer.cyclon.PeerDescriptor;
  */
 public final class ResourceManager extends ComponentDefinition {
 
-	private static final int PROBES_PER_JOB = 2;
+	private static final int PROBES_PER_JOB = 1;
 
 	private static final Logger logger = LoggerFactory
 			.getLogger(ResourceManager.class);
@@ -68,7 +69,8 @@ public final class ResourceManager extends ComponentDefinition {
 
 	/* Components for probing */
 	private final Queue<Task> waiting = new LinkedList<Task>();
-	private final Map<Address, Task> outstanding = new HashMap<Address, Task>();
+	private final Map<Long, Address> assigned = new HashMap<Long, Address>();
+	private final Map<Address, TreeMap<Long, TaskPlaceholder>> outstanding = new TreeMap<Address, TreeMap<Long, TaskPlaceholder>>();
 
 	// private AvailableResources availableResources;
 	// private TaskQueue queue;
@@ -142,8 +144,8 @@ public final class ResourceManager extends ComponentDefinition {
 	Handler<CyclonSample> handleCyclonSample = new Handler<CyclonSample>() {
 		@Override
 		public void handle(CyclonSample event) {
-			System.out.println(self.getIp() + " - received samples: "
-					+ event.getSample().size());
+			// System.out.println(self.getIp() + " - received samples: "
+			// + event.getSample().size());
 
 			// receive a new list of neighbours
 			neighbours.clear();
@@ -151,7 +153,7 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	};
 
-	public void probe(final Task t) {
+	public void probe(final TaskPlaceholder t) {
 		assert !waiting.contains(t);
 		waiting.add(t);
 
@@ -165,14 +167,14 @@ public final class ResourceManager extends ComponentDefinition {
 
 		/* Select only among nodes which can satisfy this task */
 		List<PeerCap> sel = FuncTools.filter(p, neighbours);
-		Collections.shuffle(sel);
+		// Collections.shuffle(sel, random);
 
 		int put = PROBES_PER_JOB; // × t.njobs
 		for (PeerCap cap : sel) {
 			if (put-- <= 0)
 				break;
 
-			outstanding.put(cap.address, t);
+			addToOustanding(cap.address, t);
 			trigger(new Probing.Request(self, cap.address, t), networkPort);
 		}
 
@@ -183,14 +185,14 @@ public final class ResourceManager extends ComponentDefinition {
 
 	private void serve(Address peer, Task reserved) {
 		Iterator<Task> i = waiting.iterator();
-		boolean assigned = false;
-		while (i.hasNext() && !assigned) {
+		boolean isUsed = false;
+		while (i.hasNext() && !isUsed) {
 			Task t = i.next();
 			if (reserved.getNumCpus() >= t.getNumCpus()
 					&& reserved.getMemoryInMbs() >= t.getMemoryInMbs()) {
 				i.remove();
-				assigned = true;
-
+				isUsed = true;
+				assigned.put(t.getId(), peer);
 				trigger(new Probing.Allocate(self, peer, reserved.getId(), t),
 						networkPort);
 			}
@@ -200,28 +202,58 @@ public final class ResourceManager extends ComponentDefinition {
 				.printf("serve(%s) -> assigned? %s\n", peer.getIp(), assigned);
 
 		// if we couldn't assign anything we cancel
-		if (!assigned) {
-			trigger(new Probing.Cancel(self, peer, reserved.getId()),
-					networkPort);
+		// but only if that peer hasn't been already assigned for
+		// that same task on a previous iteration
+		if (!isUsed) {
+			if (!assigned.containsKey(reserved.getId())
+					|| !assigned.get(reserved.getId()).equals(peer))
+				trigger(new Probing.Cancel(self, peer, reserved.getId()),
+						networkPort);
 		}
 	}
 
 	private final Handler<Probing.Response> handleProbingResponse = new Handler<Probing.Response>() {
 		@Override
 		public void handle(Probing.Response resp) {
-			Address peer = resp.getSource();
-			Task t = outstanding.remove(peer);
+
+			TaskPlaceholder t = getOustanding(resp.getSource(), resp.id);
+			System.err.println(self.getIp() + " GOT RESPONSE FROM "
+					+ resp.getSource().getIp() + " FOR " + t.getId());
 			if (t != null) {
-				serve(peer, t);
+				serve(resp.getSource(), t);
 			}
+			assert t != null;
 		}
+
 	};
+
+	private void addToOustanding(Address address, TaskPlaceholder t) {
+
+		if (!outstanding.containsKey(address))
+			outstanding.put(address, new TreeMap<Long, TaskPlaceholder>());
+
+		outstanding.get(address).put(t.getId(), t);
+
+	}
+
+	private TaskPlaceholder getOustanding(Address source, long id) {
+		TaskPlaceholder toReturn = null;
+		Map<Long, TaskPlaceholder> addressToIds = outstanding.get(source);
+		if (addressToIds != null)
+			toReturn = addressToIds.remove(id);
+
+		if (addressToIds.isEmpty())
+			outstanding.remove(source);
+		return toReturn;
+	}
 
 	private final Handler<Probing.Request> handleProbingRequest = new Handler<Probing.Request>() {
 		@Override
 		public void handle(Probing.Request event) {
 
-			trigger(new Resources.Reserve(event.task, event.getSource()),
+			System.err.println(self.getIp() + " GOT PROBE FOR "
+					+ event.task.getId());
+			trigger(new Resources.Reserve(event.task),
 					worker.getNegative(WorkerPort.class));
 
 		}
@@ -233,7 +265,7 @@ public final class ResourceManager extends ComponentDefinition {
 
 			System.err.println(self.getIp() + " GOT ALLOCATE FOR "
 					+ event.task.getId());
-			trigger(new Resources.Allocate(event.refId, event.task),
+			trigger(new Resources.Allocate(event.referenceId, event.task),
 					worker.getNegative(WorkerPort.class));
 		}
 	};
@@ -252,9 +284,9 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Resources.Confirm> handleConfirmRequest = new Handler<Resources.Confirm>() {
 		@Override
 		public void handle(Resources.Confirm event) {
-
-			trigger(new Probing.Response(self, event.master, event.task),
-					networkPort);
+			System.err.println(self.getIp() + " REQUESTING CONFIRMATION");
+			trigger(new Probing.Response(self, event.getTask().getTaskMaster(),
+					event.getTask().getId()), networkPort);
 
 		}
 	};
@@ -263,15 +295,10 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(ClientRequestResource event) {
 
-			System.out.println(self.getIp() + " allocating resources: "
-					+ event.getNumCpus() + " + " + event.getMemoryInMbs()
-					+ " (" + event.getTimeToHoldResource() + ")");
-			// TODO: Ask for resources from neighbours
-			// by sending a ResourceRequest
-			// RequestResources.Request req = new RequestResources.Request(self,
-			// self,
-			// event.getNumCpus(), event.getMemoryInMbs());
-			// trigger(req, networkPort);
+			System.err.println(self.getIp() + " allocating " + event.getId()
+					+ " resources: " + event.getNumCpus() + " + "
+					+ event.getMemoryInMbs() + " ("
+					+ event.getTimeToHoldResource() + ")");
 
 			/*
 			 * // Direct allocation trigger(new AllocateResources(event.getId(),
@@ -279,9 +306,20 @@ public final class ResourceManager extends ComponentDefinition {
 			 * event.getTimeToHoldResource()),
 			 * worker.getNegative(WorkerPort.class));
 			 */
-			Task t = new Task(event.getId(), event.getNumCpus(),
-					event.getMemoryInMbs(), event.getTimeToHoldResource());
-			probe(t);
+			TaskPlaceholder t = new TaskPlaceholder(event.getId(),
+					event.getNumCpus(), event.getMemoryInMbs(),
+					event.getTimeToHoldResource(), self);
+
+			t.queue();
+
+			if (configuration.isOmniscent()) {
+				t.executeDirectly = true;
+				trigger(new Resources.Reserve(t),
+						worker.getNegative(WorkerPort.class));
+			} else {
+
+				probe(t);
+			}
 		}
 	};
 

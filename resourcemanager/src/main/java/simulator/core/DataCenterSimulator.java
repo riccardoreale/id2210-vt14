@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.TreeMap;
 
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
@@ -68,8 +67,6 @@ public final class DataCenterSimulator extends ComponentDefinition {
 	private AsIpGenerator ipGenerator = AsIpGenerator.getInstance(125);
 	private Map<Address, Pair<Component, AvailableResourcesImpl>> omniscentOracle = new HashMap<Address, Pair<Component, AvailableResourcesImpl>>();
 
-	Random r = new Random(System.currentTimeMillis());
-
 	public DataCenterSimulator() {
 		peers = new HashMap<Long, Component>();
 		peersAddress = new HashMap<Long, Address>();
@@ -109,6 +106,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		@Override
 		public void handle(ClientRequestResource event) {
 			Component peer = null;
+			System.err.println("GENERATED " + event.getId());
 			if (dataCenterConfiguration.omniscent) {
 				peer = omniscentSelector(event.getNumCpus(),
 						event.getMemoryInMbs());
@@ -223,6 +221,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		Snapshot.addPeer(address, ar);
 		omniscentOracle.put(address,
 				new Pair<Component, AvailableResourcesImpl>(peer, ar));
+
 	}
 
 	private void stopAndDestroyPeer(Long id) {

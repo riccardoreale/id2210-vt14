@@ -1,51 +1,35 @@
 package resourcemanager.system.peer.rm;
 
 import resourcemanager.system.peer.rm.task.Task;
+import resourcemanager.system.peer.rm.task.TaskPlaceholder;
 import se.sics.kompics.Event;
-import se.sics.kompics.address.Address;
 
 public class Resources {
 
 	private static class Base extends Event {
-		private final long id;
-		private final int numCpus;
-		private final int memoryInMbs;
 
-		public Base(long id, int numCpus, int memoryInMbs) {
-			this.id = id;
-			this.numCpus = numCpus;
-			this.memoryInMbs = memoryInMbs;
+		private TaskPlaceholder task;
+
+		public Base(TaskPlaceholder t) {
+			this.task = t;
 		}
 
-		public long getId() {
-			return id;
-		}
-
-		public int getMemoryInMbs() {
-			return memoryInMbs;
-		}
-
-		public int getNumCpus() {
-			return numCpus;
+		public TaskPlaceholder getTask() {
+			return task;
 		}
 	}
 
 	public static class Reserve extends Base {
-		public final Address taskMaster;
 
-		public Reserve(Task t, Address taskMaster) {
-			super(t.getId(), t.getNumCpus(), t.getMemoryInMbs());
-			this.taskMaster = taskMaster;
+		public Reserve(TaskPlaceholder t) {
+			super(t);
 		}
 	}
 
-	public static class Confirm extends Event {
-		public Task task;
-		public Address master;
+	public static class Confirm extends Base {
 
-		public Confirm(Task t, Address master) {
-			this.task = t;
-			this.master = master;
+		public Confirm(TaskPlaceholder t) {
+			super(t);
 		}
 	}
 
@@ -54,9 +38,13 @@ public class Resources {
 		public Task task;
 
 		public Allocate(long referenceId, Task t) {
-			this.referencId = referenceId;
 			this.task = t;
+			this.referencId = referenceId;
 
+		}
+
+		public Task getTask() {
+			return task;
 		}
 	}
 
