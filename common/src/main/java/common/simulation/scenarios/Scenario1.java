@@ -11,7 +11,7 @@ public class Scenario1 extends Scenario {
 	private static final int NODE_MEMORY = 12000;
 	private static final int NODE_CPU = 8;
 
-	private static final int JOBS = 400;
+	private static final int JOBS = 500;
 	private static final int JOB_MEMORY = 2000;
 	private static final int JOB_CPU = 2;
 	private static final int JOB_TIME = 10000;

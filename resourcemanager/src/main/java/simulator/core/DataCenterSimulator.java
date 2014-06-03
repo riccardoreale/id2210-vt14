@@ -209,6 +209,10 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		public void handle(TerminateExperiment event) {
 			log.info("Finishing experiment - terminating....");
 			Kompics.shutdown();
+			omniscentOracle.clear();
+			peers.clear();
+			peersAddress.clear();
+			// TODO: find a better way to clean up
 			// System.exit(0);
 		}
 	};

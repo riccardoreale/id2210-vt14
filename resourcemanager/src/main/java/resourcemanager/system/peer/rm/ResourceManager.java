@@ -1,6 +1,7 @@
 package resourcemanager.system.peer.rm;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -64,6 +65,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private RmConfiguration configuration;
 	private Random random;
 	private Component worker;
+	private AvailableResourcesImpl res;
 
 	/* Components for probing */
 	private final Queue<Task> waiting = new LinkedList<Task>();
@@ -103,13 +105,19 @@ public final class ResourceManager extends ComponentDefinition {
 		subscribe(handleConfirmRequest, worker.getNegative(WorkerPort.class));
 	}
 
+	private String getId() {
+		return "[" + res.getNumFreeCpus() + " " + self.getIp() + "]";
+	}
+
 	Handler<RmInit> handleInit = new Handler<RmInit>() {
+
 		@Override
 		public void handle(RmInit init) {
 
 			self = init.getSelf();
 			configuration = init.getConfiguration();
-			random = new Random(init.getConfiguration().getSeed());
+			random = new Random(init.getConfiguration().getSeed()
+					* self.getId());
 			long period = configuration.getPeriod();
 
 			SchedulePeriodicTimeout rst = new SchedulePeriodicTimeout(period,
@@ -117,9 +125,8 @@ public final class ResourceManager extends ComponentDefinition {
 			rst.setTimeoutEvent(new UpdateTimeout(rst));
 			trigger(rst, timerPort);
 
-			trigger(new WorkerInit(self,
-					(AvailableResourcesImpl) init.getAvailableResources()),
-					worker.getControl());
+			res = (AvailableResourcesImpl) init.getAvailableResources();
+			trigger(new WorkerInit(self, res), worker.getControl());
 
 		}
 	};
@@ -165,16 +172,19 @@ public final class ResourceManager extends ComponentDefinition {
 
 		/* Select only among nodes which can satisfy this task */
 		List<PeerCap> sel = FuncTools.filter(p, neighbours);
-		// Collections.shuffle(sel, random);
+		Collections.shuffle(sel, random);
 
+		List<PeerCap> chosen = new ArrayList<PeerCap>();
 		int put = configuration.getProbes(); // × t.njobs
 		for (PeerCap cap : sel) {
 			if (put-- <= 0)
 				break;
-
+			chosen.add(cap);
 			addToOustanding(cap.address, t);
 			trigger(new Probing.Request(self, cap.address, t), networkPort);
 		}
+
+		log.debug(getId() + " SENDING PROBE FOR " + t.getId() + " TO " + chosen);
 
 		// if (put > 0) {
 		// log.warn("I don't know enough peers: need {} more", put);
@@ -191,6 +201,13 @@ public final class ResourceManager extends ComponentDefinition {
 				i.remove();
 				isUsed = true;
 				assigned.put(t.getId(), peer);
+				log.info(getId()
+						+ " ASSIGNING "
+						+ t.getId()
+						+ " TO "
+						+ peer.getIp()
+						+ (t.getId() != reserved.getId() ? " (OLD:"
+								+ reserved.getId() + ")" : ""));
 				trigger(new Probing.Allocate(self, peer, reserved.getId(), t),
 						networkPort);
 			}
@@ -200,10 +217,10 @@ public final class ResourceManager extends ComponentDefinition {
 		// but only if that peer hasn't been already assigned for
 		// that same task on a previous iteration
 		if (!isUsed) {
-			if (!assigned.containsKey(reserved.getId())
-					|| !assigned.get(reserved.getId()).equals(peer))
-				trigger(new Probing.Cancel(self, peer, reserved.getId()),
-						networkPort);
+			log.info(getId() + " SENDING CANCEL FOR " + reserved.getId()
+					+ " TO " + peer.getIp());
+			trigger(new Probing.Cancel(self, peer, reserved.getId()),
+					networkPort);
 		}
 	}
 
@@ -212,7 +229,7 @@ public final class ResourceManager extends ComponentDefinition {
 		public void handle(Probing.Response resp) {
 
 			TaskPlaceholder t = getOustanding(resp.getSource(), resp.id);
-			log.debug(self.getIp() + " GOT RESPONSE FROM "
+			log.debug(getId() + " GOT RESPONSE FROM "
 					+ resp.getSource().getIp() + " FOR " + t.getId());
 			if (t != null) {
 				serve(resp.getSource(), t);
@@ -246,7 +263,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Request event) {
 
-			log.debug(self.getIp() + " GOT PROBE FOR " + event.task.getId());
+			log.debug(getId() + " GOT PROBE FOR " + event.task.getId());
 			trigger(new Resources.Reserve(event.task),
 					worker.getNegative(WorkerPort.class));
 
@@ -257,7 +274,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Allocate event) {
 
-			log.debug(self.getIp() + " GOT ALLOCATE FOR " + event.task.getId());
+			log.debug(getId() + " GOT ALLOCATE FOR " + event.task.getId());
 			trigger(new Resources.Allocate(event.referenceId, event.task),
 					worker.getNegative(WorkerPort.class));
 		}
@@ -267,7 +284,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Cancel event) {
 
-			log.debug(self.getIp() + " GOT cancel FOR " + event.refId);
+			log.debug(getId() + " GOT cancel FOR " + event.refId);
 
 			trigger(new Resources.Cancel(event.refId),
 					worker.getNegative(WorkerPort.class));
@@ -277,7 +294,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Resources.Confirm> handleConfirmRequest = new Handler<Resources.Confirm>() {
 		@Override
 		public void handle(Resources.Confirm event) {
-			log.debug(self.getIp() + " REQUESTING CONFIRMATION");
+			log.debug(getId() + " REQUESTING CONFIRMATION");
 			trigger(new Probing.Response(self, event.getTask().getTaskMaster(),
 					event.getTask().getId()), networkPort);
 
@@ -288,10 +305,9 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(ClientRequestResource event) {
 
-			log.debug(self.getIp() + " allocating " + event.getId()
-					+ " resources: " + event.getNumCpus() + " + "
-					+ event.getMemoryInMbs() + " ("
-					+ event.getTimeToHoldResource() + ")");
+			log.debug(getId() + " allocating " + event.getId() + " resources: "
+					+ event.getNumCpus() + " + " + event.getMemoryInMbs()
+					+ " (" + event.getTimeToHoldResource() + ")");
 
 			/*
 			 * // Direct allocation trigger(new AllocateResources(event.getId(),

@@ -16,8 +16,7 @@ import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
 public class RmWorker extends ComponentDefinition {
-	private static final Logger log = LoggerFactory
-			.getLogger(RmWorker.class);
+	private static final Logger log = LoggerFactory.getLogger(RmWorker.class);
 
 	Positive<Timer> timerPort = positive(Timer.class);
 	Positive<WorkerPort> workerPort = positive(WorkerPort.class);
@@ -36,6 +35,13 @@ public class RmWorker extends ComponentDefinition {
 		subscribe(handleTaskDone, timerPort);
 	}
 
+	private String getId() {
+		return "[" + res.getNumFreeCpus() + "/"
+				+ res.getWorkingQueue().running.size() + "/"
+				+ res.getWorkingQueue().waiting.size() + "/"
+				+ waitingConfirmation.size() + " " + self.getIp() + "]";
+	}
+
 	Handler<WorkerInit> handleInit = new Handler<WorkerInit>() {
 
 		@Override
@@ -48,8 +54,6 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Reserve> handleReserve = new Handler<Resources.Reserve>() {
 		@Override
 		public void handle(Resources.Reserve event) {
-			log.debug(System.currentTimeMillis() + " "
-					+ event.getTask().getId());
 			res.workingQueue.waiting.add(event.getTask());
 
 			pop();
@@ -62,7 +66,7 @@ public class RmWorker extends ComponentDefinition {
 			if (waitingConfirmation.containsKey(event.referencId)) {
 
 				TaskPlaceholder placeholder = waitingConfirmation
-						.get(event.referencId);
+						.remove(event.referencId);
 				res.release(placeholder.getNumCpus(),
 						placeholder.getMemoryInMbs());
 
@@ -75,7 +79,7 @@ public class RmWorker extends ComponentDefinition {
 				runTask(event.task);
 
 			} else
-				log.debug("AAAA");
+				log.warn("AAAA");
 		}
 	};
 
@@ -88,12 +92,14 @@ public class RmWorker extends ComponentDefinition {
 						.remove(event.referencId);
 
 				res.release(remove.getNumCpus(), remove.getMemoryInMbs());
-				res.workingQueue.running.remove(remove.getId());
+				// res.workingQueue.running.remove(remove.getId());
 
-				log.debug(self.getIp() + " REMOVED " + remove.getId());
+				log.debug(getId() + " REMOVED " + remove.getId());
+
+				pop();
 
 			} else
-				log.debug("CCCC");
+				log.warn("CCCC");
 		}
 	};
 
@@ -102,14 +108,15 @@ public class RmWorker extends ComponentDefinition {
 		public void handle(TaskDone event) {
 			Task t = (Task) res.workingQueue.running.remove(event.id);
 			if (t == null)
-				log.debug(self.getIp() + " " + event.id);
+				log.error(getId() + " " + event.id);
 			assert t != null;
 			t.deallocate();
 			res.release(t.getNumCpus(), t.getMemoryInMbs());
 			res.workingQueue.getDone().add(t);
 			log.info(
-					"Done {}, QueueTime={}, TotalTime={}",
+					"{} Done {}, QueueTime={}, TotalTime={}",
 					new Object[] {
+							getId(),
 							t.getId(),
 							t.getQueueTime(),
 							(float) (t.getTimeToHoldResource())
@@ -122,9 +129,12 @@ public class RmWorker extends ComponentDefinition {
 
 	private void pop() {
 		TaskPlaceholder t = (TaskPlaceholder) res.workingQueue.waiting.peek();
-		if (t == null)
+		if (t == null) {
+			if (res.workingQueue.running.size() == 0)
+				if (waitingConfirmation.size() == 0)
+					assert res.getNumFreeCpus() == res.getTotalCpus();
 			return;
-
+		}
 		if (res.isAvailable(t.getNumCpus(), t.getMemoryInMbs())) {
 			res.workingQueue.waiting.poll();
 
@@ -151,14 +161,14 @@ public class RmWorker extends ComponentDefinition {
 
 		res.workingQueue.running.put(placeholder.getId(), placeholder);
 
-		log.info("Allocated {}", placeholder.getId());
+		log.info(getId() + " Allocated {}", placeholder.getId());
 
 		runTask(placeholder);
 	}
 
 	private void runTask(Task t) {
-		log.debug(self.getIp() + " RUNNING " + t.getId() + " ("
-				+ res.numFreeCpus + "/" + res.freeMemInMbs + ")");
+		log.debug(getId() + " RUNNING " + t.getId() + " (" + res.numFreeCpus
+				+ "/" + res.freeMemInMbs + ")");
 		t.allocate();
 		ScheduleTimeout tout = new ScheduleTimeout(t.getTimeToHoldResource());
 		tout.setTimeoutEvent(new TaskDone(tout, t.getId()));

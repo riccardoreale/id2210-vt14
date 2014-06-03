@@ -33,6 +33,7 @@ public final class DataCenterSimulationMain extends ComponentDefinition {
     public static void main(String[] args) {
         Kompics.setScheduler(simulatorScheduler);
         Kompics.createAndStart(DataCenterSimulationMain.class, 1);
+        
     }
 
 	

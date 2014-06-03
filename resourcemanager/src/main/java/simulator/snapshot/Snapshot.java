@@ -1,8 +1,14 @@
 package simulator.snapshot;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.commons.math.stat.descriptive.rank.Percentile;
 
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.Task;
@@ -58,20 +64,49 @@ public class Snapshot {
 	public static void evaluate() {
 		long totalTime = 0;
 		long totalQueueTime = 0;
+		long totalDone = 0;
+		ArrayList<Double> queueTimes = new ArrayList<Double>();
+
 		for (PeerInfo p : peers.values()) {
 			AvailableResourcesImpl res = (AvailableResourcesImpl) p
 					.getAvailableResources();
 
 			List<Task> done = res.getWorkingQueue().getDone();
+			totalDone += done.size();
 			for (Task task : done) {
 				totalTime += task.getTotalTime();
 				totalQueueTime += task.getQueueTime();
+				queueTimes.add((double) task.getQueueTime());
 			}
 		}
 
 		double ratio = (double) totalQueueTime / totalTime;
-		System.err.println(load + "\t" + probes + "\t" + totalTime + "\t"
-				+ totalQueueTime + "\t" + ratio);
+		double averageQueue = Math.round((double) totalQueueTime / totalDone);
+		Percentile p = new Percentile(99);
+		double[] values = new double[queueTimes.size()];
+		for (int i = 0; i < queueTimes.size(); i++) {
+			values[i] = queueTimes.get(i);
+		}
+		// System.err.println(Arrays.toString(values));
+		double percentile99 = Math.round(p.evaluate(values));
+
+		// String roundResults = load + "\t" + probes + "\t" + totalTime + "\t"
+		// + totalQueueTime + "\t" + ratio + "\t" + averageQueue;
+
+		String roundResults = load + "\t" + probes + "\t" + averageQueue + "\t"
+				+ percentile99;
+
+		System.err.println(roundResults);
+
+		try {
+			PrintWriter out = new PrintWriter(new BufferedWriter(
+					new FileWriter("out.txt", true)));
+			out.println(roundResults);
+			out.close();
+		} catch (IOException e) {
+			// exception handling left as an exercise for the reader
+		}
+
 	}
 
 	private static String reportNetworkState() {

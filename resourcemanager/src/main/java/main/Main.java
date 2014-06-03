@@ -24,5 +24,6 @@ public class Main {
 		Scenario scenario = new Scenario1();
 		scenario.setSeed(seed);
 		scenario.getScenario().simulate(DataCenterSimulationMain.class);
+
 	}
 }
