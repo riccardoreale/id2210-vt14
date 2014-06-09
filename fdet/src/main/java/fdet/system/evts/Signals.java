@@ -9,23 +9,37 @@ public class Signals extends PortType {
 	{
 		positive(Dead.class);
 		positive(Undead.class);
+		negative(Subscribe.class);
+		negative(Unsubscribe.class);
 	}
 	
-	public static class Info extends Event {
-		final Address ref;
-		Info(Address ref) {
+	private static class Base extends Event {
+		public final Address ref;
+		private Base(Address ref) {
 			this.ref = ref;
 		}
 	}
 
-	public static class Dead extends Info {
-		Dead(Address ref) {
+	public static class Dead extends Base {
+		public Dead(Address ref) {
 			super(ref);
 		}
 	}
 	
-	public static class Undead extends Info {
-		Undead(Address ref) {
+	public static class Undead extends Base {
+		public Undead(Address ref) {
+			super(ref);
+		}
+	}
+
+	public static class Subscribe extends Base {
+		public Subscribe(Address ref) {
+			super(ref);
+		}
+	}
+
+	public static class Unsubscribe extends Base {
+		public Unsubscribe(Address ref) {
 			super(ref);
 		}
 	}
