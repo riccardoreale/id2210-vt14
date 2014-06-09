@@ -10,8 +10,23 @@ public class Probing {
 	public static class Request extends Message {
 		private static final long serialVersionUID = 6925804371732048383L;
 		public final TaskPlaceholder task;
+		public final Address taskMaster;
+		public final int count;
 
-		protected Request(Address self, Address target, TaskPlaceholder t) {
+		protected Request(Address self, Address target, TaskPlaceholder t,
+				Address taskMaster, int count) {
+			super(self, target);
+			this.task = t;
+			this.taskMaster = taskMaster;
+			this.count = count;
+		}
+	}
+
+	public static class GotRequest extends Message {
+		private static final long serialVersionUID = 1091630415746168650L;
+		public final TaskPlaceholder task;
+
+		protected GotRequest(Address self, Address target, TaskPlaceholder t) {
 			super(self, target);
 			this.task = t;
 		}

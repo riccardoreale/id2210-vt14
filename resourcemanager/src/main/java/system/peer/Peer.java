@@ -21,10 +21,12 @@ import se.sics.kompics.p2p.bootstrap.client.BootstrapClient;
 import se.sics.kompics.p2p.bootstrap.client.BootstrapClientInit;
 import se.sics.kompics.timer.Timer;
 import tman.system.peer.tman.TMan;
+import tman.system.peer.tman.TManInit;
 import tman.system.peer.tman.TManSamplePort;
 
 import common.configuration.CyclonConfiguration;
 import common.configuration.RmConfiguration;
+import common.configuration.TManConfiguration;
 import common.peer.PeerDescriptor;
 
 import cyclon.system.peer.cyclon.Cyclon;
@@ -85,6 +87,7 @@ public final class Peer extends ComponentDefinition {
 			self = init.getPeerSelf();
 			CyclonConfiguration cyclonConfiguration = init
 					.getCyclonConfiguration();
+			TManConfiguration tmanconfig = init.getTmanConfiguration();
 			rmConfiguration = init.getApplicationConfiguration();
 			bootstrapRequestPeerCount = cyclonConfiguration
 					.getBootstrapRequestPeerCount();
@@ -93,6 +96,9 @@ public final class Peer extends ComponentDefinition {
 
 			trigger(new CyclonInit(cyclonConfiguration, availableResources),
 					cyclon.getControl());
+
+			trigger(new TManInit(self, tmanconfig, availableResources),
+					tman.getControl());
 			trigger(new BootstrapClientInit(self,
 					init.getBootstrapConfiguration()), bootstrap.getControl());
 			BootstrapRequest request = new BootstrapRequest("Cyclon",

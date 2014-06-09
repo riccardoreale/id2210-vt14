@@ -235,7 +235,8 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 		AvailableResourcesImpl ar = new AvailableResourcesImpl(numCpus, memInMb);
 		trigger(new PeerInit(address, bootstrapConfiguration,
-				cyclonConfiguration, rmConfiguration, ar), peer.getControl());
+				cyclonConfiguration, rmConfiguration, ar, tmanConfiguration),
+				peer.getControl());
 
 		trigger(new Start(), peer.getControl());
 		peers.put(id, peer);

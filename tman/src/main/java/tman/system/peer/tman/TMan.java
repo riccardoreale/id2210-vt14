@@ -2,8 +2,10 @@ package tman.system.peer.tman;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,17 +20,17 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import tman.simulator.snapshot.Snapshot;
 
 import common.configuration.TManConfiguration;
 import common.peer.AvailableResources;
+import common.peer.PeerCap;
 
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
 
 public final class TMan extends ComponentDefinition {
 
-	private static final Logger logger = LoggerFactory.getLogger(TMan.class);
+	private static final Logger log = LoggerFactory.getLogger(TMan.class);
 
 	Negative<TManSamplePort> tmanPort = negative(TManSamplePort.class);
 	Positive<CyclonSamplePort> cyclonSamplePort = positive(CyclonSamplePort.class);
@@ -36,10 +38,14 @@ public final class TMan extends ComponentDefinition {
 	Positive<Timer> timerPort = positive(Timer.class);
 	private long period;
 	private Address self;
-	private ArrayList<Address> tmanPartners;
+	private ArrayList<PeerCap> tmanPartners;
+	protected ArrayList<PeerCap> cyclonPartners;
 	private TManConfiguration tmanConfiguration;
 	private Random r;
 	private AvailableResources availableResources;
+
+	private int psi = 5;
+	private int m = 10;
 
 	public class TManSchedule extends Timeout {
 
@@ -53,7 +59,7 @@ public final class TMan extends ComponentDefinition {
 	}
 
 	public TMan() {
-		tmanPartners = new ArrayList<Address>();
+		tmanPartners = new ArrayList<PeerCap>();
 
 		subscribe(handleInit, control);
 		subscribe(handleRound, timerPort);
@@ -68,8 +74,12 @@ public final class TMan extends ComponentDefinition {
 			self = init.getSelf();
 			tmanConfiguration = init.getConfiguration();
 			period = tmanConfiguration.getPeriod();
-			r = new Random(tmanConfiguration.getSeed());
+			r = new Random(tmanConfiguration.getSeed() * self.getId());
 			availableResources = init.getAvailableResources();
+
+			tmanPartners = new ArrayList<PeerCap>();
+			cyclonPartners = new ArrayList<PeerCap>();
+
 			SchedulePeriodicTimeout rst = new SchedulePeriodicTimeout(period,
 					period);
 			rst.setTimeoutEvent(new TManSchedule(rst));
@@ -81,19 +91,49 @@ public final class TMan extends ComponentDefinition {
 	Handler<TManSchedule> handleRound = new Handler<TManSchedule>() {
 		@Override
 		public void handle(TManSchedule event) {
-			Snapshot.updateTManPartners(self, tmanPartners);
 
+			if (tmanPartners.isEmpty()) {
+				if (cyclonPartners.isEmpty()) {
+					// nothing, wait for cyclon samples
+					return;
+				}
+				Set<PeerCap> cyclonSet = new HashSet<PeerCap>(cyclonPartners);
+				cyclonSet.remove(self);
+				tmanPartners = selectView(generateMyPeerCap(), cyclonSet, m);
+			}
+
+			Address p = selectPeer();
+
+			Set<PeerCap> buf = new HashSet<PeerCap>();
+			buf.add(generateMyPeerCap());
+			buf.addAll(cyclonPartners);
+			buf.addAll(tmanPartners);
+
+			ArrayList<PeerCap> selectView = selectView(generateMyPeerCap(),
+					buf, m);
+
+			ExchangeMsg.Request tmanViewRequest = new ExchangeMsg.Request(self,
+					p, selectView, generateMyPeerCap());
+			trigger(tmanViewRequest, networkPort);
+			buf.clear();
+
+			// if (self.getIp().toString().equals("/153.20.24.193"))
+			// System.err.println(generateMyPeerCap() + " " + tmanPartners);
+
+			// Snapshot.updateTManPartners(self, tmanPartners);
 			// Publish sample to connected components
+
 			trigger(new TManSample(tmanPartners), tmanPort);
 		}
 	};
 
+	protected boolean limit;
+
 	Handler<CyclonSample> handleCyclonSample = new Handler<CyclonSample>() {
 		@Override
 		public void handle(CyclonSample event) {
-			List<Address> cyclonPartners = event.getAddresses();
+			cyclonPartners = event.getSample();
 
-			// merge cyclonPartners into TManPartners
 		}
 	};
 
@@ -101,6 +141,25 @@ public final class TMan extends ComponentDefinition {
 		@Override
 		public void handle(ExchangeMsg.Request event) {
 
+			Set<PeerCap> buf = new HashSet<PeerCap>();
+			buf.addAll(cyclonPartners);
+			buf.addAll(tmanPartners);
+			buf.add(generateMyPeerCap());
+			ArrayList<PeerCap> rankedView = selectView(
+					event.getSourcePeerCap(), buf, m);
+
+			ExchangeMsg.Response tmanViewResponse = new ExchangeMsg.Response(
+					self, event.getSource(), rankedView);
+			buf.clear();
+			trigger(tmanViewResponse, networkPort);
+
+			buf.addAll(event.getRandomBuffer());
+			buf.addAll(tmanPartners);
+
+			// tmanPartners = selectView(generateMyPeerCap(), buf, m);
+			tmanPartners = new ArrayList<PeerCap>(buf);
+
+			buf.clear();
 		}
 	};
 
@@ -108,8 +167,37 @@ public final class TMan extends ComponentDefinition {
 		@Override
 		public void handle(ExchangeMsg.Response event) {
 
+			Set<PeerCap> buf = new HashSet<PeerCap>();
+			buf.addAll(event.getSelectedBuffer());
+			buf.addAll(tmanPartners);
+
+			tmanPartners = new ArrayList<PeerCap>(buf);
 		}
 	};
+
+	private ArrayList<PeerCap> selectView(PeerCap ref, Set<PeerCap> buf,
+			int limit) {
+		ArrayList<PeerCap> rankedView = rank(ref, buf);
+
+		if (rankedView.size() > limit)
+			rankedView = new ArrayList<PeerCap>(rankedView.subList(0, limit));
+
+		return rankedView;
+	}
+
+	protected PeerCap generateMyPeerCap() {
+		return new PeerCap(self, availableResources.getTotalCpus(),
+				availableResources.getTotalMemory(),
+				availableResources.getNumFreeCpus(),
+				availableResources.getFreeMemInMbs());
+	}
+
+	private ArrayList<PeerCap> rank(PeerCap ref, Set<PeerCap> buf) {
+		ArrayList<PeerCap> list = new ArrayList<PeerCap>(buf);
+		Collections.sort(list, new GradientResourceComparator(ref));
+
+		return list;
+	}
 
 	// TODO - if you call this method with a list of entries, it will
 	// return a single node, weighted towards the 'best' node (as defined by
@@ -145,6 +233,24 @@ public final class TMan extends ComponentDefinition {
 			}
 		}
 		return entries.get(entries.size() - 1);
+	}
+
+	private Address selectPeer() {
+		if (tmanPartners.isEmpty()) {
+			return null;
+		} else if (tmanPartners.size() == 1) {
+			return tmanPartners.get(0).getAddress();
+		} else {
+
+			ArrayList<PeerCap> rankedView = selectView(generateMyPeerCap(),
+					new HashSet<PeerCap>(tmanPartners), psi);
+
+			int q = r.nextInt(rankedView.size());
+
+			Address peerSelected = rankedView.get(q).getAddress();
+
+			return peerSelected;
+		}
 	}
 
 }

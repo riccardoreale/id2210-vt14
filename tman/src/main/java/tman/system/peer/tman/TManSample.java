@@ -2,24 +2,21 @@ package tman.system.peer.tman;
 
 import java.util.ArrayList;
 
-
 import se.sics.kompics.Event;
-import se.sics.kompics.address.Address;
 
+import common.peer.PeerCap;
 
 public class TManSample extends Event {
-	ArrayList<Address> partners = new ArrayList<Address>();
+	ArrayList<PeerCap> partners = new ArrayList<PeerCap>();
 
-
-	public TManSample(ArrayList<Address> partners) {
+	public TManSample(ArrayList<PeerCap> partners) {
 		this.partners = partners;
 	}
-        
+
 	public TManSample() {
 	}
 
-
-	public ArrayList<Address> getSample() {
+	public ArrayList<PeerCap> getSample() {
 		return this.partners;
 	}
 }

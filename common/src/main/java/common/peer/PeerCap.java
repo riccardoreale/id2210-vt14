@@ -46,6 +46,22 @@ public class PeerCap implements Comparable<PeerCap> {
 		return 0;
 	}
 
+	@Override
+	public boolean equals(Object other) {
+		if (this == other)
+			return true;
+		PeerCap otherP = (PeerCap) other;
+		if (otherP.getAddress().equals(getAddress()))
+			return true;
+
+		return false;
+	}
+
+	@Override
+	public int hashCode() {
+		return getAddress().hashCode();
+	}
+
 	public Address getAddress() {
 		return address;
 	}

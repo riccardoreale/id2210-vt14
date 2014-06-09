@@ -1,87 +1,66 @@
 package tman.system.peer.tman;
 
-import java.util.UUID;
+import java.util.ArrayList;
 
-import cyclon.system.peer.cyclon.DescriptorBuffer;
 import se.sics.kompics.address.Address;
 import se.sics.kompics.network.Message;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
 
+import common.peer.PeerCap;
+
 public class ExchangeMsg {
 
-    public static class Request extends Message {
+	public static class Request extends Message {
 
-        private static final long serialVersionUID = 8493601671018888143L;
-        private final UUID requestId;
-        private final DescriptorBuffer randomBuffer;
+		private static final long serialVersionUID = 8493601671018888143L;
+		private final ArrayList<PeerCap> randomBuffer;
+		private PeerCap sourcePeerCap;
 
+		public Request(Address source, Address destination,
+				ArrayList<PeerCap> randomBuffer, PeerCap sourcePeerCap) {
+			super(source, destination);
+			this.randomBuffer = randomBuffer;
+			this.sourcePeerCap = sourcePeerCap;
+		}
 
-        public Request(UUID requestId, DescriptorBuffer randomBuffer, Address source, 
-                Address destination) {
-            super(source, destination);
-            this.requestId = requestId;
-            this.randomBuffer = randomBuffer;
-        }
+		public ArrayList<PeerCap> getRandomBuffer() {
+			return randomBuffer;
+		}
 
+		public PeerCap getSourcePeerCap() {
+			return sourcePeerCap;
+		}
+	}
 
-        public UUID getRequestId() {
-            return requestId;
-        }
+	public static class Response extends Message {
 
-        
-        public DescriptorBuffer getRandomBuffer() {
-            return randomBuffer;
-        }
+		private static final long serialVersionUID = -5022051054665787770L;
+		private final ArrayList<PeerCap> selectedBuffer;
 
+		public Response(Address source, Address destination,
+				ArrayList<PeerCap> selectedBuffer) {
+			super(source, destination);
+			this.selectedBuffer = selectedBuffer;
+		}
 
-        public int getSize() {
-            return 0;
-        }
-    }
+		public ArrayList<PeerCap> getSelectedBuffer() {
+			return selectedBuffer;
+		}
 
-    public static class Response extends Message {
+	}
 
-        private static final long serialVersionUID = -5022051054665787770L;
-        private final UUID requestId;
-        private final DescriptorBuffer selectedBuffer;
+	public static class RequestTimeout extends Timeout {
 
+		private final Address peer;
 
-        public Response(UUID requestId, DescriptorBuffer selectedBuffer, Address source, Address destination) {
-            super(source, destination);
-            this.requestId = requestId;
-            this.selectedBuffer = selectedBuffer;
-        }
+		public RequestTimeout(ScheduleTimeout request, Address peer) {
+			super(request);
+			this.peer = peer;
+		}
 
-
-        public UUID getRequestId() {
-            return requestId;
-        }
-
-
-        public DescriptorBuffer getSelectedBuffer() {
-            return selectedBuffer;
-        }
-
-
-        public int getSize() {
-            return 0;
-        }
-    }
-
-    public static class RequestTimeout extends Timeout {
-
-        private final Address peer;
-
-
-        public RequestTimeout(ScheduleTimeout request, Address peer) {
-            super(request);
-            this.peer = peer;
-        }
-
-
-        public Address getPeer() {
-            return peer;
-        }
-    }
+		public Address getPeer() {
+			return peer;
+		}
+	}
 }

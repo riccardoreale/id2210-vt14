@@ -39,9 +39,9 @@ public class Configuration {
 		this.seed = seed;
 		dataCenterConfiguration = new DataCenterConfiguration(omniscent, load);
 		searchConfiguration = new RmConfiguration(seed, omniscent, probes);
-		tmanConfiguration = new TManConfiguration(seed, 1000, 0.8);
-		cyclonConfiguration = new CyclonConfiguration(seed, 5, 10, 1000,
-				500000, (long) (Integer.MAX_VALUE - Integer.MIN_VALUE), 20);
+		tmanConfiguration = new TManConfiguration(seed, 200, 0.8);
+		cyclonConfiguration = new CyclonConfiguration(seed, 5, 10, 200, 500000,
+				(long) (Integer.MAX_VALUE - Integer.MIN_VALUE), 20);
 
 		String c = File.createTempFile("bootstrap.", ".conf").getAbsolutePath();
 		bootConfiguration.store(c);

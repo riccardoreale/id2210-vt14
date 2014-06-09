@@ -7,6 +7,7 @@ import se.sics.kompics.p2p.bootstrap.BootstrapConfiguration;
 
 import common.configuration.CyclonConfiguration;
 import common.configuration.RmConfiguration;
+import common.configuration.TManConfiguration;
 
 public final class PeerInit extends Init {
 
@@ -15,18 +16,21 @@ public final class PeerInit extends Init {
 	private final CyclonConfiguration cyclonConfiguration;
 	private final RmConfiguration applicationConfiguration;
 	private final AvailableResourcesImpl availableResources;
+	private final TManConfiguration tmanConfiguration;
 
 	public PeerInit(Address peerSelf,
 			BootstrapConfiguration bootstrapConfiguration,
 			CyclonConfiguration cyclonConfiguration,
 			RmConfiguration applicationConfiguration,
-			AvailableResourcesImpl availableResources) {
+			AvailableResourcesImpl availableResources,
+			TManConfiguration tmanConfiguration) {
 		super();
 		this.peerSelf = peerSelf;
 		this.bootstrapConfiguration = bootstrapConfiguration;
 		this.cyclonConfiguration = cyclonConfiguration;
 		this.applicationConfiguration = applicationConfiguration;
 		this.availableResources = availableResources;
+		this.tmanConfiguration = tmanConfiguration;
 
 	}
 
@@ -50,4 +54,7 @@ public final class PeerInit extends Init {
 		return this.applicationConfiguration;
 	}
 
+	public TManConfiguration getTmanConfiguration() {
+		return tmanConfiguration;
+	}
 }
