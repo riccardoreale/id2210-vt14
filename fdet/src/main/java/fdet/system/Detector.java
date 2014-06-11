@@ -41,10 +41,17 @@ public class Detector extends ComponentDefinition {
 		int refcount;
 		UUID timeoutId;
 		boolean dead;
+		boolean alive;
 
-		Info(UUID timeoutId) {
+		Info() {
 			this.refcount = 1;
 			this.dead = false;
+			this.alive = false;
+			this.timeoutId = null;
+		}
+
+		public void reset(UUID timeoutId) {
+			this.alive = false;
 			this.timeoutId = timeoutId;
 		}
 	}
@@ -71,16 +78,18 @@ public class Detector extends ComponentDefinition {
 		}
 	};
 	
+	private void startRound(Address target, Info info) {
+		sendPing(target, true);
+		info.reset(setTimer(target, conf.pingTimeout));
+	}
+
 	private Handler<FdetPort.Subscribe> handleSubscribe = new Handler<FdetPort.Subscribe>() {
 		@Override
 		public void handle(FdetPort.Subscribe event) {
-			assert false : String.format("%s: Node %s is subscribed", conf.self, event.ref);
-
 			Info stored = tracked.get(event.ref);
 			if (stored == null) {
-				sendPing(event.ref, true);
-				UUID tid = setTimer(event.ref, conf.pingTimeout);
-				stored = new Info(tid);
+				stored = new Info();
+				startRound(event.ref, stored);
 				tracked.put(event.ref, stored);
 			} else {
 				assert false : "Currently not enable. Do we need this?";
@@ -110,10 +119,13 @@ public class Detector extends ComponentDefinition {
 			Info stored = tracked.get(event.ref);
 			assert stored != null;
 			
-			stored.dead = true;
-			sendPing(event.ref, true);
-			setTimer(event.ref, conf.pingTimeout);
-			trigger(new FdetPort.Dead(event.ref), servicePort);
+			if (!stored.alive) {
+				if (!stored.dead) {
+					trigger(new FdetPort.Dead(event.ref), servicePort);
+					stored.dead = true;
+				}
+			}
+			startRound(event.ref, stored);
 		}
 	};
 	
@@ -127,27 +139,11 @@ public class Detector extends ComponentDefinition {
 			}
 			if (stored != null) {
 				if (stored.dead) {
-					/* We signaled the peer as dead, so we need to withdraw our claim. No need
-					* to re-trigger the ping + timeout, as they are still running. */
+					/* We signaled the peer as dead, so we need to withdraw our claim. */
 					trigger(new FdetPort.Undead(from), servicePort);
 					stored.dead = false;
-				} else {
-					/* We did not get a timeout yet, so the timer is still active! */
-					trigger(new CancelTimeout(stored.timeoutId), timerPort);
-
-					/* Thinking...
-					 *
-					 *  If the two hosts are pinging each other, here we have twice as much
-					 *  pings. I suspect a good way to fix this would be removing the following
-					 *  `sendPing` and put `stored != null` in the XXX line above?
-					 *
-					 *  Keeping it simple for the moment.
-					 */
-					sendPing(from, true);
-
-					/* FIXME: shall we increase time to measured round-trip time? */
-					stored.timeoutId = setTimer(from, conf.pingTimeout);
 				}
+				stored.alive = true;
 			}
 		}
 	};
