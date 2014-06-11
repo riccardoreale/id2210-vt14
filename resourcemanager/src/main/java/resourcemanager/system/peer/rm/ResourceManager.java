@@ -42,6 +42,7 @@ import common.utils.FuncTools.Proposition;
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
 import cyclon.system.peer.cyclon.PeerDescriptor;
+import fdet.system.evts.FdetPort;
 
 /**
  * Should have some comments here.
@@ -58,6 +59,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Positive<Timer> timerPort = positive(Timer.class);
 	private final Positive<CyclonSamplePort> cyclonSamplePort = positive(CyclonSamplePort.class);
 	private final Positive<TManSamplePort> tmanPort = positive(TManSamplePort.class);
+	private final Positive<FdetPort> fdetPort = positive(FdetPort.class);
 
 	private final ArrayList<PeerCap> neighbours = new ArrayList<PeerCap>();
 
@@ -113,7 +115,6 @@ public final class ResourceManager extends ComponentDefinition {
 
 		@Override
 		public void handle(RmInit init) {
-
 			self = init.getSelf();
 			configuration = init.getConfiguration();
 			random = new Random(init.getConfiguration().getSeed()
@@ -145,12 +146,21 @@ public final class ResourceManager extends ComponentDefinition {
 					.getAddress();
 		}
 	};
+	
+	private static boolean first = true;
 
 	Handler<CyclonSample> handleCyclonSample = new Handler<CyclonSample>() {
 		@Override
 		public void handle(CyclonSample event) {
 			// System.out.println(self.getIp() + " - received samples: "
 			// + event.getSample().size());
+			
+			ArrayList<PeerCap> shittySample = event.getSample();
+			if (first && shittySample.size() > 0) {
+				first = false;
+				PeerCap cap = event.getSample().get(0);
+				trigger(new FdetPort.Subscribe(cap.address), fdetPort);
+			}
 
 			// receive a new list of neighbours
 			neighbours.clear();

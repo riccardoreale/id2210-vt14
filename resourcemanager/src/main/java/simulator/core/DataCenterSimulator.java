@@ -34,6 +34,7 @@ import system.peer.RmPort;
 import common.configuration.Configuration;
 import common.configuration.CyclonConfiguration;
 import common.configuration.DataCenterConfiguration;
+import common.configuration.FdetConfiguration;
 import common.configuration.RmConfiguration;
 import common.configuration.TManConfiguration;
 import common.simulation.ClientRequestResource;
@@ -70,6 +71,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 	private CyclonConfiguration cyclonConfiguration;
 	private RmConfiguration rmConfiguration;
 	private TManConfiguration tmanConfiguration;
+	private FdetConfiguration fdetConfiguration;
 	private Long identifierSpaceSize;
 	private ConsistentHashtable<Long> ringNodes;
 	private AsIpGenerator ipGenerator = AsIpGenerator.getInstance(125);
@@ -100,6 +102,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 			tmanConfiguration = init.getTmanConfiguration();
 			dataCenterConfiguration = init.getDataCenterConfiguration();
 			identifierSpaceSize = cyclonConfiguration.getIdentifierSpaceSize();
+			fdetConfiguration = init.getFdetConfiguration();
 
 			Snapshot.init(rmConfiguration.getProbes(),
 					dataCenterConfiguration.load);
@@ -235,7 +238,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 		AvailableResourcesImpl ar = new AvailableResourcesImpl(numCpus, memInMb);
 		trigger(new PeerInit(address, bootstrapConfiguration,
-				cyclonConfiguration, rmConfiguration, ar), peer.getControl());
+				cyclonConfiguration, rmConfiguration, ar, fdetConfiguration), peer.getControl());
 
 		trigger(new Start(), peer.getControl());
 		peers.put(id, peer);

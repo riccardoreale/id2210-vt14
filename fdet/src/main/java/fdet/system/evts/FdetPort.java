@@ -4,7 +4,7 @@ import se.sics.kompics.Event;
 import se.sics.kompics.PortType;
 import se.sics.kompics.address.Address;
 
-public class Signals extends PortType {
+public class FdetPort extends PortType {
 	
 	{
 		positive(Dead.class);

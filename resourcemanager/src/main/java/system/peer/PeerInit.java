@@ -6,6 +6,7 @@ import se.sics.kompics.address.Address;
 import se.sics.kompics.p2p.bootstrap.BootstrapConfiguration;
 
 import common.configuration.CyclonConfiguration;
+import common.configuration.FdetConfiguration;
 import common.configuration.RmConfiguration;
 
 public final class PeerInit extends Init {
@@ -15,19 +16,25 @@ public final class PeerInit extends Init {
 	private final CyclonConfiguration cyclonConfiguration;
 	private final RmConfiguration applicationConfiguration;
 	private final AvailableResourcesImpl availableResources;
+	private final FdetConfiguration fdetConfiguration;
 
 	public PeerInit(Address peerSelf,
 			BootstrapConfiguration bootstrapConfiguration,
 			CyclonConfiguration cyclonConfiguration,
 			RmConfiguration applicationConfiguration,
-			AvailableResourcesImpl availableResources) {
+			AvailableResourcesImpl availableResources,
+			FdetConfiguration fdetConfiguration) {
 		super();
 		this.peerSelf = peerSelf;
 		this.bootstrapConfiguration = bootstrapConfiguration;
 		this.cyclonConfiguration = cyclonConfiguration;
 		this.applicationConfiguration = applicationConfiguration;
 		this.availableResources = availableResources;
+		this.fdetConfiguration = fdetConfiguration;
+	}
 
+	public long getFdTimeout() {
+		return fdetConfiguration.timeout;
 	}
 
 	public AvailableResourcesImpl getAvailableResources() {

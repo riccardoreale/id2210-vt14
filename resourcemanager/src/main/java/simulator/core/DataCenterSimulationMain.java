@@ -1,6 +1,7 @@
 package simulator.core;
 
 import common.configuration.DataCenterConfiguration;
+import common.configuration.FdetConfiguration;
 import common.configuration.RmConfiguration;
 import common.configuration.CyclonConfiguration;
 import common.configuration.TManConfiguration;
@@ -49,9 +50,10 @@ public final class DataCenterSimulationMain extends ComponentDefinition {
         final TManConfiguration tmanConfig = TManConfiguration.load(System.getProperty("tman.configuration"));
         final RmConfiguration rmConfig = RmConfiguration.load(System.getProperty("rm.configuration"));
         final DataCenterConfiguration dcConfig = DataCenterConfiguration.load(System.getProperty("datacenter.configuration"));
+        final FdetConfiguration fdetConfig = FdetConfiguration.load(System.getProperty("fdet.configuration"));
 
         trigger(new SimulatorInit(bootConfig, cyclonConfig, tmanConfig,
-                rmConfig, dcConfig), rmSimulator.getControl());
+                rmConfig, dcConfig, fdetConfig), rmSimulator.getControl());
         trigger(new P2pSimulatorInit(simulatorScheduler, scenario, new KingLatencyMap()), 
                 p2pSimulator.getControl());
         trigger(new BootstrapServerInit(bootConfig), bootstrapServer.getControl());

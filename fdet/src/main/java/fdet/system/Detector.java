@@ -4,10 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import fdet.system.evts.DetectorInit;
 import fdet.system.evts.DetectorTimeout;
 import fdet.system.evts.Ping;
-import fdet.system.evts.Signals;
+import fdet.system.evts.FdetPort;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -19,10 +22,12 @@ import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
 public class Detector extends ComponentDefinition {
+
+	private static final Logger log = LoggerFactory.getLogger(Detector.class);
 	
 	private final Positive<Network> networkPort = positive(Network.class);
 	private final Positive<Timer> timerPort = positive(Timer.class); 
-	private final Negative<Signals> servicePort = negative(Signals.class);
+	private final Negative<FdetPort> servicePort = negative(FdetPort.class);
 	
 	public Detector() {
 		subscribe(handleInit, control);
@@ -66,9 +71,11 @@ public class Detector extends ComponentDefinition {
 		}
 	};
 	
-	private Handler<Signals.Subscribe> handleSubscribe = new Handler<Signals.Subscribe>() {
+	private Handler<FdetPort.Subscribe> handleSubscribe = new Handler<FdetPort.Subscribe>() {
 		@Override
-		public void handle(Signals.Subscribe event) {
+		public void handle(FdetPort.Subscribe event) {
+			assert false : String.format("%s: Node %s is subscribed", conf.self, event.ref);
+
 			Info stored = tracked.get(event.ref);
 			if (stored == null) {
 				sendPing(event.ref, true);
@@ -82,9 +89,9 @@ public class Detector extends ComponentDefinition {
 		}
 	};
 
-	private Handler<Signals.Unsubscribe> handleUnsubscribe = new Handler<Signals.Unsubscribe>() {
+	private Handler<FdetPort.Unsubscribe> handleUnsubscribe = new Handler<FdetPort.Unsubscribe>() {
 		@Override
-		public void handle(Signals.Unsubscribe event) {
+		public void handle(FdetPort.Unsubscribe event) {
 			Info stored = tracked.get(event.ref);
 			if (stored == null) return;
 			if (stored.refcount > 1) {
@@ -106,7 +113,7 @@ public class Detector extends ComponentDefinition {
 			stored.dead = true;
 			sendPing(event.ref, true);
 			setTimer(event.ref, conf.pingTimeout);
-			trigger(new Signals.Dead(event.ref), servicePort);
+			trigger(new FdetPort.Dead(event.ref), servicePort);
 		}
 	};
 	
@@ -122,7 +129,7 @@ public class Detector extends ComponentDefinition {
 				if (stored.dead) {
 					/* We signaled the peer as dead, so we need to withdraw our claim. No need
 					* to re-trigger the ping + timeout, as they are still running. */
-					trigger(new Signals.Undead(from), servicePort);
+					trigger(new FdetPort.Undead(from), servicePort);
 					stored.dead = false;
 				} else {
 					/* We did not get a timeout yet, so the timer is still active! */
