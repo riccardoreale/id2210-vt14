@@ -43,6 +43,7 @@ import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
 import cyclon.system.peer.cyclon.PeerDescriptor;
 import fdet.system.evts.FdetPort;
+import fdet.system.evts.FdetPort.Dead;
 
 /**
  * Should have some comments here.
@@ -101,6 +102,8 @@ public final class ResourceManager extends ComponentDefinition {
 		subscribe(handleProbingAllocate, networkPort);
 		subscribe(handleProbingCancel, networkPort);
 		subscribe(handleTManSample, tmanPort);
+		subscribe(handleFailure, fdetPort);
+		subscribe(handleRestore, fdetPort);
 
 		worker = create(RmWorker.class);
 		connect(timerPort, worker.getNegative(Timer.class));
@@ -147,24 +150,38 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	};
 	
-	private static boolean first = true;
-
 	Handler<CyclonSample> handleCyclonSample = new Handler<CyclonSample>() {
 		@Override
 		public void handle(CyclonSample event) {
 			// System.out.println(self.getIp() + " - received samples: "
 			// + event.getSample().size());
-			
-			ArrayList<PeerCap> shittySample = event.getSample();
-			if (first && shittySample.size() > 0) {
-				first = false;
-				PeerCap cap = event.getSample().get(0);
-				trigger(new FdetPort.Subscribe(cap.address), fdetPort);
+
+			for (PeerCap cap : neighbours) {
+				trigger(new FdetPort.Unsubscribe(cap.address), fdetPort);
 			}
 
-			// receive a new list of neighbours
 			neighbours.clear();
 			neighbours.addAll(event.getSample());
+
+			for (PeerCap cap : neighbours) {
+				trigger(new FdetPort.Subscribe(cap.address), fdetPort);
+			}
+		}
+	};
+
+	Handler<FdetPort.Dead> handleFailure = new Handler<FdetPort.Dead>() {
+		@Override
+		public void handle(Dead event) {
+			log.debug("Node {} seems to be dead!", event.ref);
+			assert false : "one";
+		}
+	};
+
+	Handler<Dead> handleRestore = new Handler<FdetPort.Dead>() {
+		@Override
+		public void handle(Dead event) {
+			log.debug("No, actually {} seems to be alive!", event.ref);
+			assert false : "two";
 		}
 	};
 
