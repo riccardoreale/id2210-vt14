@@ -11,10 +11,10 @@
 
     <modules>
         <module>common</module>
+        <module>fdet</module>
         <module>cyclon</module>
         <module>resourcemanager</module>
         <module>tman</module>
-        <module>fdet</module>
     </modules>
 
     <properties>
