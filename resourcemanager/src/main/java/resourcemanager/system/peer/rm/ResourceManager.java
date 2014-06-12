@@ -156,32 +156,20 @@ public final class ResourceManager extends ComponentDefinition {
 			// System.out.println(self.getIp() + " - received samples: "
 			// + event.getSample().size());
 
-			for (PeerCap cap : neighbours) {
-				trigger(new FdetPort.Unsubscribe(cap.address), fdetPort);
-			}
-
 			neighbours.clear();
 			neighbours.addAll(event.getSample());
-
-			for (PeerCap cap : neighbours) {
-				trigger(new FdetPort.Subscribe(cap.address), fdetPort);
-			}
 		}
 	};
 
 	Handler<FdetPort.Dead> handleFailure = new Handler<FdetPort.Dead>() {
 		@Override
-		public void handle(Dead event) {
-			log.debug("Node {} seems to be dead!", event.ref);
-			assert false : "one";
+		public void handle(FdetPort.Dead event) {
 		}
 	};
 
-	Handler<Dead> handleRestore = new Handler<FdetPort.Dead>() {
+	Handler<FdetPort.Undead> handleRestore = new Handler<FdetPort.Undead>() {
 		@Override
-		public void handle(Dead event) {
-			log.debug("No, actually {} seems to be alive!", event.ref);
-			assert false : "two";
+		public void handle(FdetPort.Undead event) {
 		}
 	};
 
