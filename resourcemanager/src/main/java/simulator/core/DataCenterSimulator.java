@@ -45,21 +45,12 @@ import common.simulation.PeerFail;
 import common.simulation.PeerJoin;
 import common.simulation.SimulatorInit;
 import common.simulation.SimulatorPort;
+import common.utils.Pair;
 
 public final class DataCenterSimulator extends ComponentDefinition {
 
 	private static final Logger log = LoggerFactory
 			.getLogger(DataCenterSimulator.class);
-
-	private class Pair<X, Y> {
-		public final X fst;
-		public final Y snd;
-
-		public Pair(X f, Y s) {
-			fst = f;
-			snd = s;
-		}
-	}
 
 	Positive<SimulatorPort> simulator = positive(SimulatorPort.class);
 	Positive<Network> network = positive(Network.class);
