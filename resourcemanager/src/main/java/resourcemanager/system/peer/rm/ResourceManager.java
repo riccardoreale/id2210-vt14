@@ -37,13 +37,11 @@ import common.configuration.RmConfiguration;
 import common.peer.PeerCap;
 import common.simulation.ClientRequestResource;
 import common.utils.FuncTools;
-import common.utils.FuncTools.Proposition;
 
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
 import cyclon.system.peer.cyclon.PeerDescriptor;
 import fdet.system.evts.FdetPort;
-import fdet.system.evts.FdetPort.Dead;
 
 /**
  * Should have some comments here.
@@ -177,7 +175,7 @@ public final class ResourceManager extends ComponentDefinition {
 		assert !waiting.contains(t);
 		waiting.add(t);
 
-		Proposition<PeerCap> p = new Proposition<PeerCap>() {
+		FuncTools.Proposition<PeerCap> p = new FuncTools.Proposition<PeerCap>() {
 			@Override
 			public boolean eval(PeerCap param) {
 				return param.maxMemory >= t.getMemoryInMbs()
