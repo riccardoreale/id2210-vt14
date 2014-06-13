@@ -142,10 +142,10 @@ public class RmWorker extends ComponentDefinition {
 				allocateDirectly(t);
 			else
 				getConfirm(t);
-		} else {
-			// FIXME: check when inserting into workingQueue, not here.
-			assert false : "This should never happen";
 		}
+		// FIXME. The "else" here is missing because it could be the case
+		// that the entered task is small enough to be scheduled
+		// immediately.
 	}
 
 	private void getConfirm(TaskPlaceholder t) {
