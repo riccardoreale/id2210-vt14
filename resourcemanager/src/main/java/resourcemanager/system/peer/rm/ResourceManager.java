@@ -241,7 +241,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Response resp) {
 
-			TaskPlaceholder t = getOustanding(resp.getSource(), resp.id);
+			TaskPlaceholder t = getOustanding(resp.getSource(), resp.referenceId);
 			log.debug(getId() + " GOT RESPONSE FROM "
 					+ resp.getSource().getIp() + " FOR " + t.getId());
 			if (t != null) {
@@ -297,9 +297,9 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Cancel event) {
 
-			log.debug(getId() + " GOT cancel FOR " + event.refId);
+			log.debug(getId() + " GOT cancel FOR " + event.referenceId);
 
-			trigger(new Resources.Cancel(event.refId),
+			trigger(new Resources.Cancel(event.referenceId),
 					worker.getNegative(WorkerPort.class));
 		}
 	};

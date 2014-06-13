@@ -16,37 +16,41 @@ public class Probing {
 			this.task = t;
 		}
 	}
+	
+	private static class RefMessage extends Message {
+		private static final long serialVersionUID = -669442991122622071L;
+		public final long referenceId;
 
-	public static class Response extends Message {
+		protected RefMessage(Address source, Address destination, long referenceId) {
+			super(source, destination);
+			this.referenceId = referenceId;
+		}	
+	}
+
+	public static class Response extends RefMessage {
 		private static final long serialVersionUID = 1091630415746168650L;
-		public final long id;
 
-		protected Response(Address self, Address target, long id) {
-			super(self, target);
-			this.id = id;
+		protected Response(Address self, Address target, long referenceId) {
+			super(self, target, referenceId);
 		}
 	}
 
-	public static class Allocate extends Message {
+	public static class Allocate extends RefMessage {
 		private static final long serialVersionUID = 2238633324998152336L;
 		public final Task task;
-		public final long referenceId;
 
 		protected Allocate(Address self, Address target, long referenceId,
-				Task actualTask) {
-			super(self, target);
-			this.referenceId = referenceId;
+		                   Task actualTask) {
+			super(self, target, referenceId);
 			this.task = actualTask;
 		}
 	}
 
-	public static class Cancel extends Message {
+	public static class Cancel extends RefMessage {
 		private static final long serialVersionUID = 3997942241176863428L;
-		public long refId;
 
 		protected Cancel(Address self, Address target, long referenceId) {
-			super(self, target);
-			this.refId = referenceId;
+			super(self, target, referenceId);
 		}
 	}
 }
