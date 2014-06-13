@@ -6,11 +6,11 @@ import se.sics.kompics.Event;
 
 public class Resources {
 
-	private static class Base extends Event {
+	private static class TaskEvent extends Event {
 
 		private TaskPlaceholder task;
 
-		public Base(TaskPlaceholder t) {
+		public TaskEvent(TaskPlaceholder t) {
 			this.task = t;
 		}
 
@@ -19,28 +19,34 @@ public class Resources {
 		}
 	}
 
-	public static class Reserve extends Base {
+	public static class Reserve extends TaskEvent {
 
 		public Reserve(TaskPlaceholder t) {
 			super(t);
 		}
 	}
 
-	public static class Confirm extends Base {
+	public static class Confirm extends TaskEvent {
 
 		public Confirm(TaskPlaceholder t) {
 			super(t);
 		}
 	}
+	
+	private static class RefEvent extends Event {
+		public final long referenceId;
+		
+		public RefEvent(long referenceId) {
+			this.referenceId = referenceId;
+		}
+	}
 
-	public static class Allocate extends Event {
-		public long referencId;
+	public static class Allocate extends RefEvent {
 		public Task task;
 
 		public Allocate(long referenceId, Task t) {
+			super(referenceId);
 			this.task = t;
-			this.referencId = referenceId;
-
 		}
 
 		public Task getTask() {
@@ -48,12 +54,9 @@ public class Resources {
 		}
 	}
 
-	public static class Cancel extends Event {
-		public long referencId;
-
+	public static class Cancel extends RefEvent {
 		public Cancel(long referenceId) {
-			this.referencId = referenceId;
-
+			super(referenceId);
 		}
 	}
 }

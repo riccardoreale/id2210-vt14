@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import resourcemanager.system.peer.rm.Resources;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
-import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.address.Address;
 import se.sics.kompics.timer.ScheduleTimeout;
@@ -20,7 +19,6 @@ public class RmWorker extends ComponentDefinition {
 
 	Positive<Timer> timerPort = positive(Timer.class);
 	Positive<WorkerPort> workerPort = positive(WorkerPort.class);
-	Negative<WorkerPort> workerPort2 = negative(WorkerPort.class);
 
 	private AvailableResourcesImpl res = null;
 	private Address self;
@@ -63,10 +61,10 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Allocate> handleAllocate = new Handler<Resources.Allocate>() {
 		@Override
 		public void handle(Resources.Allocate event) {
-			if (waitingConfirmation.containsKey(event.referencId)) {
+			if (waitingConfirmation.containsKey(event.referenceId)) {
 
 				TaskPlaceholder placeholder = waitingConfirmation
-						.remove(event.referencId);
+						.remove(event.referenceId);
 				res.release(placeholder.getNumCpus(),
 						placeholder.getMemoryInMbs());
 
@@ -86,10 +84,10 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Cancel> handleCancel = new Handler<Resources.Cancel>() {
 		@Override
 		public void handle(Resources.Cancel event) {
-			if (waitingConfirmation.containsKey(event.referencId)) {
+			if (waitingConfirmation.containsKey(event.referenceId)) {
 
 				TaskPlaceholder remove = waitingConfirmation
-						.remove(event.referencId);
+						.remove(event.referenceId);
 
 				res.release(remove.getNumCpus(), remove.getMemoryInMbs());
 				// res.workingQueue.running.remove(remove.getId());
@@ -130,6 +128,7 @@ public class RmWorker extends ComponentDefinition {
 	private void pop() {
 		TaskPlaceholder t = (TaskPlaceholder) res.workingQueue.waiting.peek();
 		if (t == null) {
+			// FIXME: probably this could be a single assertion: !(a && b) || c
 			if (res.workingQueue.running.size() == 0)
 				if (waitingConfirmation.size() == 0)
 					assert res.getNumFreeCpus() == res.getTotalCpus();
@@ -142,6 +141,9 @@ public class RmWorker extends ComponentDefinition {
 				allocateDirectly(t);
 			else
 				getConfirm(t);
+		} else {
+			// FIXME: check when inserting into workingQueue, not here.
+			assert false : "This should never happen";
 		}
 	}
 
