@@ -106,6 +106,7 @@ public final class ResourceManager extends ComponentDefinition {
 		worker = create(RmWorker.class);
 		connect(timerPort, worker.getNegative(Timer.class));
 		subscribe(handleConfirmRequest, worker.getNegative(WorkerPort.class));
+		subscribe(handleCompleted, worker.getNegative(WorkerPort.class));
 	}
 
 	private String getId() {
@@ -311,6 +312,12 @@ public final class ResourceManager extends ComponentDefinition {
 			trigger(new Probing.Response(self, event.getTask().getTaskMaster(),
 					event.getTask().getId()), networkPort);
 
+		}
+	};
+	
+	private final Handler<Resources.Completed> handleCompleted = new Handler<Resources.Completed>() {
+		@Override
+		public void handle(Resources.Completed event) {
 		}
 	};
 

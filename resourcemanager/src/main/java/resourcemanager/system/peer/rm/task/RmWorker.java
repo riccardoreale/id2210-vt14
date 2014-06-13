@@ -119,6 +119,7 @@ public class RmWorker extends ComponentDefinition {
 							t.getQueueTime(),
 							(float) (t.getTimeToHoldResource())
 									/ t.getTotalTime() });
+			trigger(new Resources.Completed(t.getId()), workerPort);
 
 			/* last */
 			pop();

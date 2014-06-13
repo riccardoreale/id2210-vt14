@@ -9,5 +9,6 @@ public class WorkerPort extends PortType {
 		positive(Resources.Reserve.class);
 		positive(Resources.Cancel.class);
 		negative(Resources.Confirm.class);
+		negative(Resources.Completed.class);
 	}
 }

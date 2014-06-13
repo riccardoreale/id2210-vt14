@@ -59,4 +59,10 @@ public class Resources {
 			super(referenceId);
 		}
 	}
+
+	public static class Completed extends RefEvent {
+		public Completed(long referenceId) {
+			super(referenceId);
+		}
+	}
 }
