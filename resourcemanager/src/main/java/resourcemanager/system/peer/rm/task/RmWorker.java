@@ -104,9 +104,9 @@ public class RmWorker extends ComponentDefinition {
 	Handler<TaskDone> handleTaskDone = new Handler<TaskDone>() {
 		@Override
 		public void handle(TaskDone event) {
-			Task t = (Task) res.workingQueue.running.remove(event.id);
+			Task t = (Task) res.workingQueue.running.remove(event.referenceId);
 			if (t == null)
-				log.error(getId() + " " + event.id);
+				log.error(getId() + " " + event.referenceId);
 			assert t != null;
 			t.deallocate();
 			res.release(t.getNumCpus(), t.getMemoryInMbs());
