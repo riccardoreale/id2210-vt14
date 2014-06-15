@@ -71,7 +71,7 @@ public final class ResourceManager extends ComponentDefinition {
 	/* Components for probing */
 	private final Queue<Task> waiting = new LinkedList<Task>();
 	private final Map<Long, Address> assigned = new HashMap<Long, Address>();
-	private final Map<Address, TreeMap<Long, TaskPlaceholder>> outstanding = new TreeMap<Address, TreeMap<Long, TaskPlaceholder>>();
+	private final Map<Address, TreeMap<Long, Task>> outstanding = new TreeMap<Address, TreeMap<Long, Task>>();
 
 	// private AvailableResources availableResources;
 	// private TaskQueue queue;
@@ -172,15 +172,15 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	};
 
-	public void probe(final TaskPlaceholder t) {
+	public void probe(final Task t) {
 		assert !waiting.contains(t);
 		waiting.add(t);
 
 		FuncTools.Proposition<PeerCap> p = new FuncTools.Proposition<PeerCap>() {
 			@Override
 			public boolean eval(PeerCap param) {
-				return param.maxMemory >= t.getMemoryInMbs()
-						&& param.maxCpu >= t.getNumCpus();
+				return param.maxMemory >= t.required.memoryInMbs
+						&& param.maxCpu >= t.required.numCpus;
 			}
 		};
 
@@ -195,6 +195,8 @@ public final class ResourceManager extends ComponentDefinition {
 				break;
 			chosen.add(cap);
 			addToOustanding(cap.address, t);
+			trigger(new Probing.Request(self, cap.address, t))
+			// HERE I'm modifying
 			trigger(new Probing.Request(self, cap.address, t), networkPort);
 		}
 
@@ -253,12 +255,12 @@ public final class ResourceManager extends ComponentDefinition {
 
 	};
 
-	private void addToOustanding(Address address, TaskPlaceholder t) {
+	private void addToOustanding(Address address, Task t) {
 
 		if (!outstanding.containsKey(address))
 			outstanding.put(address, new TreeMap<Long, TaskPlaceholder>());
 
-		outstanding.get(address).put(t.getId(), t);
+		outstanding.get(address).put(t.id, t);
 
 	}
 
@@ -325,9 +327,9 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(ClientRequestResource event) {
 
-			log.debug(getId() + " allocating " + event.getId() + " resources: "
-					+ event.getNumCpus() + " + " + event.getMemoryInMbs()
-					+ " (" + event.getTimeToHoldResource() + ")");
+			log.debug(getId() + " allocating " + event.taskId + " resources: "
+					+ event.required.numCpus + " + " + event.required.memoryInMbs
+					+ " (" + event.timeToHoldResource + ")");
 
 			/*
 			 * // Direct allocation trigger(new AllocateResources(event.getId(),
@@ -335,18 +337,13 @@ public final class ResourceManager extends ComponentDefinition {
 			 * event.getTimeToHoldResource()),
 			 * worker.getNegative(WorkerPort.class));
 			 */
-			TaskPlaceholder t = new TaskPlaceholder(event.getId(),
-					event.getNumCpus(), event.getMemoryInMbs(),
-					event.getTimeToHoldResource(), self);
-
+			Task t = new Task(event.taskId, event.required, event.timeToHoldResource);
 			t.queue();
 
 			if (configuration.isOmniscent()) {
-				t.executeDirectly = true;
-				trigger(new Resources.Reserve(t),
+				trigger(new Resources.Allocate(self, t),
 						worker.getNegative(WorkerPort.class));
 			} else {
-
 				probe(t);
 			}
 		}

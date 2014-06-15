@@ -1,7 +1,8 @@
 package resourcemanager.system.peer.rm;
 
+import common.simulation.TaskResources;
+
 import resourcemanager.system.peer.rm.task.Task;
-import resourcemanager.system.peer.rm.task.TaskPlaceholder;
 import se.sics.kompics.address.Address;
 import se.sics.kompics.network.Message;
 
@@ -9,11 +10,11 @@ public class Probing {
 
 	public static class Request extends Message {
 		private static final long serialVersionUID = 6925804371732048383L;
-		public final TaskPlaceholder task;
+		public final TaskResources required;
 
-		protected Request(Address self, Address target, TaskPlaceholder t) {
+		protected Request(Address self, Address target, TaskResources required) {
 			super(self, target);
-			this.task = t;
+			this.required = required;
 		}
 	}
 	
