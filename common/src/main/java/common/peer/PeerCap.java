@@ -7,6 +7,8 @@ import se.sics.kompics.address.Address;
  * are free or busy
  */
 public class PeerCap implements Comparable<PeerCap> {
+
+	private final static boolean USE_QUEUE_LEN = false;
 	public final Address address;
 	public final int maxCpu;
 	public final int maxMemory;
@@ -86,9 +88,7 @@ public class PeerCap implements Comparable<PeerCap> {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("[").append(address.getIp()).append(" - ");
-		sb.append(availableCpu).append("/").append(maxCpu).append(" - ")
-				.append(availableMemory).append("/").append(maxMemory)
-				.append("]");
+		sb.append(getUtilityFunction()).append("]");
 
 		return sb.toString();
 	}
@@ -106,8 +106,8 @@ public class PeerCap implements Comparable<PeerCap> {
 	 */
 	public int getUtilityFunction() {
 		int u = getAvailableCpu();
-		// if (u == 0)
-		// u -= queueLength;
+		if (USE_QUEUE_LEN && u == 0)
+			u -= queueLength;
 		return u;
 	}
 }

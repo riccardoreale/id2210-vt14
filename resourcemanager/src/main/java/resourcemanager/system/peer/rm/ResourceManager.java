@@ -50,21 +50,6 @@ import cyclon.system.peer.cyclon.CyclonSamplePort;
  */
 public final class ResourceManager extends ComponentDefinition {
 
-	public class ObjectId {
-
-		@Override
-		public String toString() {
-			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.append("[");
-			stringBuilder.append(res.getNumFreeCpus());
-			stringBuilder.append(" ");
-			stringBuilder.append(self.getIp());
-			stringBuilder.append("]");
-			return stringBuilder.toString();
-		}
-
-	}
-
 	private static final Logger log = LoggerFactory
 			.getLogger(ResourceManager.class);
 
@@ -284,8 +269,7 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 
 		/*
-		 * if we couldn't assign anything we cancel it TODO: maybe proactive
-		 * cancellation can improve gradient
+		 * if we couldn't assign anything we cancel it
 		 */
 		if (!isUsed) {
 			log.debug("{} SENDING CANCEL FOR {} TO {}", new Object[] { getId(),
@@ -335,10 +319,10 @@ public final class ResourceManager extends ComponentDefinition {
 
 			boolean depositProbe = true;
 
-			if (!res.isAvailable(event.task.getNumCpus(),
-					event.task.getMemoryInMbs())
-					&& event.count < MAX_HOPS
-					|| depositedProbes.contains(event.task.getId())) {
+			boolean available = res.isAvailable(event.task.getNumCpus(),
+					event.task.getMemoryInMbs());
+			boolean alreadyGot = depositedProbes.contains(event.task.getId());
+			if (!available && event.count < MAX_HOPS || alreadyGot) {
 
 				ArrayList<Address> exclude = new ArrayList<Address>();
 				exclude.add(event.getSource());
@@ -359,7 +343,9 @@ public final class ResourceManager extends ComponentDefinition {
 			 * communicate back to the master
 			 */
 			if (depositProbe) {
-				log.debug("{} GOT PROBE FOR {}", getId(), event.task.getId());
+				log.debug("{} GOT PROBE FOR {} AFTER {} HOPS ({})",
+						new Object[] { getId(), event.task.getId(),
+								event.count, available });
 				depositedProbes.add(event.task.getId());
 				trigger(new Probing.GotRequest(self, event.taskMaster,
 						event.task), networkPort);
@@ -512,5 +498,20 @@ public final class ResourceManager extends ComponentDefinition {
 		// System.err.println(System.currentTimeMillis() + "\t"
 		// + res.getNumFreeCpus() + "\t" + avgDistance + "\t\t"
 		// + list.size());
+	}
+
+	public class ObjectId {
+
+		@Override
+		public String toString() {
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.append("[");
+			stringBuilder.append(res.getNumFreeCpus() - res.getQueueLength());
+			stringBuilder.append(" ");
+			stringBuilder.append(self.getIp());
+			stringBuilder.append("]");
+			return stringBuilder.toString();
+		}
+
 	}
 }

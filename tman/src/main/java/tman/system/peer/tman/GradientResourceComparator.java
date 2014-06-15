@@ -11,8 +11,8 @@ import cyclon.system.peer.cyclon.PeerDescriptor;
 
 public class GradientResourceComparator implements Comparator<PeerDescriptor> {
 
-	private static final boolean USE_GREEDY = false;
-	private static final double TEMPERATURE_GRADIENT = 3;
+	private static final boolean USE_GREEDY = true;
+	private static final double TEMPERATURE_GRADIENT = 2;
 
 	private int valueRef;
 	private SoftMax softMax;

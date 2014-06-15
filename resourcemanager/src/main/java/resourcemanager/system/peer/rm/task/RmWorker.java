@@ -223,9 +223,10 @@ public class RmWorker extends ComponentDefinition {
 	 * @param t
 	 */
 	private void runTask(Task t) {
-		log.debug("{} RUNNING {} ({}/{})", new Object[] { getId(), t.getId(),
-				res.numFreeCpus, res.freeMemInMbs });
 		t.allocate();
+		log.debug("{} RUNNING {} ({}/{}) AFTER {} QUEUE TIME ",
+				new Object[] { getId(), t.getId(), res.numFreeCpus,
+						res.freeMemInMbs, t.getQueueTime() });
 		ScheduleTimeout tout = new ScheduleTimeout(t.getTimeToHoldResource());
 		tout.setTimeoutEvent(new TaskDone(tout, t.getId()));
 		trigger(tout, timerPort);
