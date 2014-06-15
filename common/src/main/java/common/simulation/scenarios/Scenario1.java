@@ -7,7 +7,7 @@ public class Scenario1 extends Scenario {
 
 	// public static float SYSTEM_LOAD = 0.8f;
 
-	private static final int NODES = 50;
+	private static final int NODES = 20;
 	private static final int NODE_MEMORY = 12000;
 	private static final int NODE_CPU = 8;
 

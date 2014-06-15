@@ -1,7 +1,6 @@
 package resourcemanager.system.peer.rm;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,6 +39,7 @@ import common.peer.PeerCap;
 import common.simulation.ClientRequestResource;
 import common.utils.FuncTools;
 import common.utils.FuncTools.Proposition;
+import common.utils.SoftMax;
 
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
@@ -52,12 +52,27 @@ import cyclon.system.peer.cyclon.PeerDescriptor;
  */
 public final class ResourceManager extends ComponentDefinition {
 
+	public class ObjectId {
+
+		@Override
+		public String toString() {
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.append("[");
+			stringBuilder.append(res.getNumFreeCpus());
+			stringBuilder.append(" ");
+			stringBuilder.append(self.getIp());
+			stringBuilder.append("]");
+			return stringBuilder.toString();
+		}
+
+	}
+
 	private static final Logger log = LoggerFactory
 			.getLogger(ResourceManager.class);
 
-	private final static boolean USE_GRADIENT = true;
-	private final static int MAX_HOPS = 4;
-	private final static float RANDOM_PROBE_RATIO = 1f;
+	public static double TEMPERATURE = 0.5;
+	public static boolean USE_GRADIENT = true;
+	public static int MAX_HOPS = 5;
 
 	private final Positive<RmPort> indexPort = positive(RmPort.class);
 	private final Positive<Network> networkPort = positive(Network.class);
@@ -69,6 +84,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Set<Long> probes = new HashSet<Long>();
 
 	private Address self;
+	private ObjectId selfId = new ObjectId();
 	private RmConfiguration configuration;
 	private Random random;
 	private Component worker;
@@ -113,8 +129,8 @@ public final class ResourceManager extends ComponentDefinition {
 		subscribe(handleConfirmRequest, worker.getNegative(WorkerPort.class));
 	}
 
-	private String getId() {
-		return "[" + res.getNumFreeCpus() + " " + self.getIp() + "]";
+	private ObjectId getId() {
+		return selfId;
 	}
 
 	Handler<RmInit> handleInit = new Handler<RmInit>() {
@@ -143,9 +159,6 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(UpdateTimeout event) {
 
-			// pick a random neighbour to ask for index updates from.
-			// You can change this policy if you want to.
-			// Maybe a gradient neighbour who is closer to the leader?
 			if (neighbours.isEmpty()) {
 				return;
 			}
@@ -158,44 +171,74 @@ public final class ResourceManager extends ComponentDefinition {
 		assert !waiting.contains(t);
 		waiting.add(t);
 
+		if (res.isAvailable(t.getNumCpus(), t.getMemoryInMbs())) {
+
+			trigger(new Probing.Request(self, self, t, self, 10), networkPort);
+			log.debug("{} SENDING PROBE FOR {} TO  MYSELF", getId(), t.getId());
+
+		} else {
+			// number of probes
+			int put = configuration.getProbes();
+
+			List<PeerCap> chosen = new ArrayList<PeerCap>();
+			List<Address> chosenAddress = new ArrayList<Address>();
+
+			while (put-- > 0) {
+
+				PeerCap cap = selectNextHop(t, chosenAddress);
+				if (cap == null)
+					break;
+
+				chosen.add(cap);
+				chosenAddress.add(cap.getAddress());
+
+				trigger(new Probing.Request(self, cap.address, t, self, 0),
+						networkPort);
+			}
+
+			log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] { getId(),
+					t.getId(), chosen });
+		}
+
+	}
+
+	private PeerCap selectNextHop(final TaskPlaceholder t,
+			final List<Address> exclude) {
+
 		Proposition<PeerCap> p = new Proposition<PeerCap>() {
 			@Override
 			public boolean eval(PeerCap param) {
-				return param.maxMemory >= t.getMemoryInMbs()
-						&& param.maxCpu >= t.getNumCpus();
+				if (exclude.contains(param.getAddress()))
+					return false;
+
+				return true;
 			}
 		};
-		int put = configuration.getProbes(); // × t.njobs
 
-		/* Select only among nodes which can satisfy this task */
+		/* Select only among nodes not excluded */
 		List<PeerCap> sel = FuncTools.filter(p, neighbours);
-		sel = sel.subList(
-				0,
-				Math.max(Math.min(2, sel.size()),
-						Math.round(sel.size() * RANDOM_PROBE_RATIO)));
-		Collections.shuffle(sel, random);
 
-		List<PeerCap> chosen = new ArrayList<PeerCap>();
-		int startCount = res.getNumFreeCpus() / 2;
-		for (PeerCap cap : sel) {
-			if (put-- <= 0)
-				break;
-			chosen.add(cap);
-			// addToOustanding(cap.address, t);
-			trigger(new Probing.Request(self, cap.address, t, self, startCount),
-					networkPort);
+		if (sel.size() == 0)
+			return null;
+		else if (sel.size() == 1)
+			return sel.get(0);
+		else {
+			/*
+			 * based on temperature we can return greedy (best utility) or
+			 * completely random
+			 */
+			SoftMax softMax = new SoftMax(sel, TEMPERATURE, random);
+			return softMax.pickPeer();
 		}
-
-		log.debug(getId() + " SENDING PROBE FOR " + t.getId() + " TO " + chosen);
-
-		// if (put > 0) {
-		// log.warn("I don't know enough peers: need {} more", put);
-		// }
 	}
 
 	private void serve(Address peer, Task reserved) {
 		Iterator<Task> i = waiting.iterator();
 		boolean isUsed = false;
+		/*
+		 * we check if we have any pending task to allocate to this available
+		 * peer
+		 */
 		while (i.hasNext() && !isUsed) {
 			Task t = i.next();
 			if (reserved.getNumCpus() >= t.getNumCpus()
@@ -203,24 +246,27 @@ public final class ResourceManager extends ComponentDefinition {
 				i.remove();
 				isUsed = true;
 				assigned.put(t.getId(), peer);
-				log.debug(getId()
-						+ " ASSIGNING "
-						+ t.getId()
-						+ " TO "
-						+ peer.getIp()
-						+ (t.getId() != reserved.getId() ? " (OLD:"
-								+ reserved.getId() + ")" : ""));
+
+				log.debug(
+						"{} ASSIGNING {} TO {} {}",
+						new Object[] {
+								getId(),
+								t.getId(),
+								peer.getIp(),
+								(t.getId() != reserved.getId() ? " (OLD:"
+										+ reserved.getId() + ")" : "") });
 				trigger(new Probing.Allocate(self, peer, reserved.getId(), t),
 						networkPort);
 			}
 		}
 
-		// if we couldn't assign anything we cancel
-		// but only if that peer hasn't been already assigned for
-		// that same task on a previous iteration
+		/*
+		 * if we couldn't assign anything we cancel it TODO: maybe proactive
+		 * cancellation can improve gradient
+		 */
 		if (!isUsed) {
-			log.debug(getId() + " SENDING CANCEL FOR " + reserved.getId()
-					+ " TO " + peer.getIp());
+			log.debug("{} SENDING CANCEL FOR {} TO {}", new Object[] { getId(),
+					reserved.getId(), peer.getIp() });
 			trigger(new Probing.Cancel(self, peer, reserved.getId()),
 					networkPort);
 		}
@@ -253,25 +299,36 @@ public final class ResourceManager extends ComponentDefinition {
 		public void handle(Probing.Request event) {
 
 			boolean depositProbe = true;
-			if (event.count < MAX_HOPS || probes.contains(event.task.getId())) {
-				ArrayList<Address> dest = new ArrayList<Address>();
-				for (PeerCap n : neighbours) {
-					if (!n.getAddress().equals(event.getSource()))
-						dest.add(n.getAddress());
-				}
-				if (dest.size() > 0) {
-					// log.debug(getId() + " PROPAGATING PROBE FOR "
-					// + event.task.getId());
-					int rIndex = random.nextInt(dest.size());
-					trigger(new Probing.Request(self, dest.get(rIndex),
+
+			/*
+			 * check if we can accept it, or reached the max number of
+			 * propagations or if we already got it
+			 */
+			if (!res.isAvailable(event.task.getNumCpus(),
+					event.task.getMemoryInMbs())
+					&& event.count < MAX_HOPS
+					|| probes.contains(event.task.getId())) {
+
+				ArrayList<Address> exclude = new ArrayList<Address>();
+				exclude.add(event.getSource());
+				PeerCap dest = selectNextHop(event.task, exclude);
+
+				if (dest != null) {
+					log.debug("{} PROPAGATING PROBE FOR {}", getId(),
+							event.task.getId());
+					trigger(new Probing.Request(self, dest.getAddress(),
 							event.task, event.taskMaster, event.count + 1),
 							networkPort);
 					depositProbe = false;
 				}
 			}
 
+			/*
+			 * I deposit the probe and reserve resources on the worker and
+			 * communicate back to the master
+			 */
 			if (depositProbe) {
-				log.debug(getId() + " GOT PROBE FOR " + event.task.getId());
+				log.debug("{} GOT PROBE FOR {}", getId(), event.task.getId());
 				probes.add(event.task.getId());
 				trigger(new Probing.GotRequest(self, event.taskMaster,
 						event.task), networkPort);
@@ -295,16 +352,13 @@ public final class ResourceManager extends ComponentDefinition {
 		public void handle(Probing.Response resp) {
 
 			TaskPlaceholder t = getOustanding(resp.getSource(), resp.id);
-			if (t == null) {
-				System.err.println(getId() + " NOT FOUND "
-						+ resp.getSource().getIp() + " FOR " + resp.id);
-			}
-			assert t != null;
-			log.debug(getId() + " GOT RESPONSE FROM "
-					+ resp.getSource().getIp() + " FOR " + t.getId());
-			if (t != null) {
-				serve(resp.getSource(), t);
-			}
+
+			assert t != null : getId() + " NOT FOUND "
+					+ resp.getSource().getIp() + " FOR " + resp.id;
+
+			log.debug("{} GOT RESPONSE FROM {} FOR {}", new Object[] { getId(),
+					resp.getSource().getIp(), t.getId() });
+			serve(resp.getSource(), t);
 		}
 
 	};
@@ -313,7 +367,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Allocate event) {
 
-			log.debug(getId() + " GOT ALLOCATE FOR " + event.task.getId());
+			log.debug("{} GOT ALLOCATE FOR {}", getId(), event.task.getId());
 			trigger(new Resources.Allocate(event.referenceId, event.task),
 					worker.getNegative(WorkerPort.class));
 		}
@@ -323,7 +377,7 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Cancel event) {
 
-			log.debug(getId() + " GOT cancel FOR " + event.refId);
+			log.debug("{} GOT cancel FOR {}", getId(), event.refId);
 
 			trigger(new Resources.Cancel(event.refId),
 					worker.getNegative(WorkerPort.class));
@@ -345,10 +399,11 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(ClientRequestResource event) {
 
-			log.info(getId() + " got ClientRequestResource " + event.getId()
-					+ " resources: " + event.getNumCpus() + " + "
-					+ event.getMemoryInMbs() + " ("
-					+ event.getTimeToHoldResource() + ")");
+			log.info(
+					"{} got ClientRequestResource {} resources: {} + {} ({})",
+					new Object[] { getId(), event.getId(), event.getNumCpus(),
+							event.getMemoryInMbs(),
+							event.getTimeToHoldResource() });
 
 			/*
 			 * // Direct allocation trigger(new AllocateResources(event.getId(),
@@ -393,21 +448,24 @@ public final class ResourceManager extends ComponentDefinition {
 			if (USE_GRADIENT) {
 				neighbours.clear();
 				neighbours.addAll(event.getSample());
-
 			}
 		}
-
 	};
 
 	private void printGradient(ArrayList<PeerCap> list, boolean gradient) {
 		double avgDistance = 0;
-		for (PeerCap p : list) {
-			avgDistance = Math.abs(p.getAvailableCpu() - res.getNumFreeCpus());
-		}
-		avgDistance = avgDistance / list.size();
+		double totDistance = 0;
+		for (PeerCap p : list)
+			totDistance = Math.abs(res.getNumFreeCpus() - p.getAvailableCpu());
+
+		avgDistance = (double) totDistance / list.size();
 		// if (gradient)
-		// System.err.println(res.getTotalCpus() + "\t\t" + avgDistance);
+		// System.err.println(System.currentTimeMillis() + "\t"
+		// + res.getNumFreeCpus() + "\t\t" + avgDistance + "\t"
+		// + list.size());
 		// else
-		// System.err.println(res.getTotalCpus() + "\t" + avgDistance);
+		// System.err.println(System.currentTimeMillis() + "\t"
+		// + res.getNumFreeCpus() + "\t" + avgDistance + "\t\t"
+		// + list.size());
 	}
 }

@@ -11,6 +11,7 @@ import se.sics.kompics.p2p.bootstrap.BootstrapConfiguration;
 
 public class Configuration {
 
+	private static final int GOSSIP_PERIOD = 250;
 	public static int SNAPSHOT_PERIOD = 1000;
 	public static int AVAILABLE_TOPICS = 20;
 	public InetAddress ip = null;
@@ -39,8 +40,9 @@ public class Configuration {
 		this.seed = seed;
 		dataCenterConfiguration = new DataCenterConfiguration(omniscent, load);
 		searchConfiguration = new RmConfiguration(seed, omniscent, probes);
-		tmanConfiguration = new TManConfiguration(seed, 200, 0.8);
-		cyclonConfiguration = new CyclonConfiguration(seed, 5, 10, 200, 500000,
+		tmanConfiguration = new TManConfiguration(seed, GOSSIP_PERIOD, 0.8);
+		cyclonConfiguration = new CyclonConfiguration(seed, 5, 10,
+				GOSSIP_PERIOD, 500000,
 				(long) (Integer.MAX_VALUE - Integer.MIN_VALUE), 20);
 
 		String c = File.createTempFile("bootstrap.", ".conf").getAbsolutePath();

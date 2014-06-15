@@ -9,12 +9,12 @@ import java.io.InputStreamReader;
 public class MainSimulations {
 
 	private final static boolean USE_ORACLE = false;
-	private final static int PROBES = 3;
+	private final static int PROBES = 2;
 
-	private final static int numSeeds = 10;
-	private final static double[] loads = new double[] {
-			 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,
-//			0.7, 0.8, 0.85, 0.9, 0.95, 1
+	private final static int numSeeds = 5;
+	private final static double[] loads = new double[] { //
+	0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1
+	// 0.8, 0.85, 0.9, 0.95, 1
 	};
 
 	public static void main(String[] args) throws Throwable {
@@ -23,7 +23,7 @@ public class MainSimulations {
 
 		Long[] seeds = new Long[numSeeds];
 		for (int i = 1; i <= numSeeds; i++) {
-			seeds[i - 1] = (long) (123412348123L / i);
+			seeds[i - 1] = (long) (44444L / i);
 		}
 		for (double load : loads) {
 			for (Long seed : seeds) {

@@ -19,6 +19,8 @@ public interface AvailableResources {
 
 	public int getTotalMemory();
 
+	public int getQueueLength();
+
 	public int getWorkingQueueTime(int numCpus, int memInMbs);
 
 }

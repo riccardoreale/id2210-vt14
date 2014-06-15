@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ import common.peer.PeerCap;
 
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
+import cyclon.system.peer.cyclon.PeerDescriptor;
 
 public final class TMan extends ComponentDefinition {
 
@@ -38,8 +40,8 @@ public final class TMan extends ComponentDefinition {
 	Positive<Timer> timerPort = positive(Timer.class);
 	private long period;
 	private Address self;
-	private ArrayList<PeerCap> tmanPartners;
-	protected ArrayList<PeerCap> cyclonPartners;
+	private ArrayList<PeerDescriptor> tmanPartners;
+	protected ArrayList<PeerDescriptor> cyclonPartners;
 	private TManConfiguration tmanConfiguration;
 	private Random r;
 	private AvailableResources availableResources;
@@ -59,7 +61,7 @@ public final class TMan extends ComponentDefinition {
 	}
 
 	public TMan() {
-		tmanPartners = new ArrayList<PeerCap>();
+		tmanPartners = new ArrayList<PeerDescriptor>();
 
 		subscribe(handleInit, control);
 		subscribe(handleRound, timerPort);
@@ -77,8 +79,8 @@ public final class TMan extends ComponentDefinition {
 			r = new Random(tmanConfiguration.getSeed() * self.getId());
 			availableResources = init.getAvailableResources();
 
-			tmanPartners = new ArrayList<PeerCap>();
-			cyclonPartners = new ArrayList<PeerCap>();
+			tmanPartners = new ArrayList<PeerDescriptor>();
+			cyclonPartners = new ArrayList<PeerDescriptor>();
 
 			SchedulePeriodicTimeout rst = new SchedulePeriodicTimeout(period,
 					period);
@@ -91,48 +93,61 @@ public final class TMan extends ComponentDefinition {
 	Handler<TManSchedule> handleRound = new Handler<TManSchedule>() {
 		@Override
 		public void handle(TManSchedule event) {
-
+			PeerCap myself = generateMyPeerCap();
 			if (tmanPartners.isEmpty()) {
 				if (cyclonPartners.isEmpty()) {
 					// nothing, wait for cyclon samples
 					return;
 				}
-				Set<PeerCap> cyclonSet = new HashSet<PeerCap>(cyclonPartners);
-				cyclonSet.remove(self);
-				tmanPartners = selectView(generateMyPeerCap(), cyclonSet, m);
+				Set<PeerDescriptor> cyclonSet = new HashSet<PeerDescriptor>(
+						cyclonPartners);
+				cyclonSet.remove(new PeerDescriptor(myself));
+				tmanPartners = selectView(myself, cyclonSet, m);
 			}
 
-			Address p = selectPeer();
+			PeerCap p = selectPeer();
 
-			Set<PeerCap> buf = new HashSet<PeerCap>();
-			buf.add(generateMyPeerCap());
+			Set<PeerDescriptor> buf = new HashSet<PeerDescriptor>();
+			buf.add(new PeerDescriptor(myself));
 			buf.addAll(cyclonPartners);
 			buf.addAll(tmanPartners);
 
-			ArrayList<PeerCap> selectView = selectView(generateMyPeerCap(),
-					buf, m);
+			incrementAll(buf);
+			ArrayList<PeerDescriptor> selectView = selectView(p, buf, m);
 
 			ExchangeMsg.Request tmanViewRequest = new ExchangeMsg.Request(self,
-					p, selectView, generateMyPeerCap());
+					p.getAddress(), selectView, generateMyPeerCap());
 			trigger(tmanViewRequest, networkPort);
 			buf.clear();
 
-			// if (self.getIp().toString().equals("/153.20.24.193"))
-			// System.err.println(generateMyPeerCap() + " " + tmanPartners);
-
-			// Snapshot.updateTManPartners(self, tmanPartners);
 			// Publish sample to connected components
-
-			trigger(new TManSample(tmanPartners), tmanPort);
+			ArrayList<PeerCap> toReturn = new ArrayList<PeerCap>();
+			// ArrayList<PeerDescriptor> selectView2 = selectView(
+			// generateMyPeerCap(), new HashSet<PeerDescriptor>(
+			// tmanPartners), m);
+			for (PeerDescriptor peerDescriptor : tmanPartners) {
+				toReturn.add(peerDescriptor.getPeerCap());
+			}
+			trigger(new TManSample(toReturn), tmanPort);
 		}
+
 	};
 
-	protected boolean limit;
+	private void incrementAll(Set<PeerDescriptor> buf) {
+		for (PeerDescriptor peerDescriptor : buf) {
+			peerDescriptor.incrementAndGetAge();
+		}
+
+	}
 
 	Handler<CyclonSample> handleCyclonSample = new Handler<CyclonSample>() {
 		@Override
 		public void handle(CyclonSample event) {
-			cyclonPartners = event.getSample();
+			// event.getSample();
+			cyclonPartners.clear();
+			for (PeerCap pcap : event.getSample()) {
+				cyclonPartners.add(new PeerDescriptor(pcap));
+			}
 
 		}
 	};
@@ -141,11 +156,11 @@ public final class TMan extends ComponentDefinition {
 		@Override
 		public void handle(ExchangeMsg.Request event) {
 
-			Set<PeerCap> buf = new HashSet<PeerCap>();
-			buf.addAll(cyclonPartners);
+			Set<PeerDescriptor> buf = new HashSet<PeerDescriptor>();
+			buf.add(new PeerDescriptor(generateMyPeerCap()));
+			// buf.addAll(cyclonPartners);
 			buf.addAll(tmanPartners);
-			buf.add(generateMyPeerCap());
-			ArrayList<PeerCap> rankedView = selectView(
+			ArrayList<PeerDescriptor> rankedView = selectView(
 					event.getSourcePeerCap(), buf, m);
 
 			ExchangeMsg.Response tmanViewResponse = new ExchangeMsg.Response(
@@ -154,10 +169,11 @@ public final class TMan extends ComponentDefinition {
 			trigger(tmanViewResponse, networkPort);
 
 			buf.addAll(event.getRandomBuffer());
-			buf.addAll(tmanPartners);
+			// buf.addAll(cyclonPartners);
+			buf.addAll(selectNewest(tmanPartners));
 
 			// tmanPartners = selectView(generateMyPeerCap(), buf, m);
-			tmanPartners = new ArrayList<PeerCap>(buf);
+			tmanPartners = new ArrayList<PeerDescriptor>(buf);
 
 			buf.clear();
 		}
@@ -167,34 +183,47 @@ public final class TMan extends ComponentDefinition {
 		@Override
 		public void handle(ExchangeMsg.Response event) {
 
-			Set<PeerCap> buf = new HashSet<PeerCap>();
+			Set<PeerDescriptor> buf = new HashSet<PeerDescriptor>();
 			buf.addAll(event.getSelectedBuffer());
-			buf.addAll(tmanPartners);
+			// buf.addAll(cyclonPartners);
+			buf.addAll(selectNewest(tmanPartners));
 
-			tmanPartners = new ArrayList<PeerCap>(buf);
+			tmanPartners = new ArrayList<PeerDescriptor>(buf);
 		}
 	};
 
-	private ArrayList<PeerCap> selectView(PeerCap ref, Set<PeerCap> buf,
-			int limit) {
-		ArrayList<PeerCap> rankedView = rank(ref, buf);
+	private ArrayList<PeerDescriptor> selectView(PeerCap ref,
+			Set<PeerDescriptor> buf, int limit) {
+		ArrayList<PeerDescriptor> rankedView = rank(ref, buf);
 
 		if (rankedView.size() > limit)
-			rankedView = new ArrayList<PeerCap>(rankedView.subList(0, limit));
+			rankedView = new ArrayList<PeerDescriptor>(rankedView.subList(0,
+					limit));
 
 		return rankedView;
+	}
+
+	protected ArrayList<PeerDescriptor> selectNewest(
+			ArrayList<PeerDescriptor> buf) {
+		TreeSet<PeerDescriptor> ordered = new TreeSet<PeerDescriptor>(buf);
+		ArrayList<PeerDescriptor> list = new ArrayList<PeerDescriptor>(ordered);
+
+		return new ArrayList<PeerDescriptor>(list.subList(0,
+				Math.min(m, list.size())));
+
 	}
 
 	protected PeerCap generateMyPeerCap() {
 		return new PeerCap(self, availableResources.getTotalCpus(),
 				availableResources.getTotalMemory(),
 				availableResources.getNumFreeCpus(),
-				availableResources.getFreeMemInMbs());
+				availableResources.getFreeMemInMbs(),
+				availableResources.getQueueLength());
 	}
 
-	private ArrayList<PeerCap> rank(PeerCap ref, Set<PeerCap> buf) {
-		ArrayList<PeerCap> list = new ArrayList<PeerCap>(buf);
-		Collections.sort(list, new GradientResourceComparator(ref));
+	private ArrayList<PeerDescriptor> rank(PeerCap ref, Set<PeerDescriptor> buf) {
+		ArrayList<PeerDescriptor> list = new ArrayList<PeerDescriptor>(buf);
+		Collections.sort(list, new GradientResourceComparator(ref, list, r));
 
 		return list;
 	}
@@ -235,19 +264,20 @@ public final class TMan extends ComponentDefinition {
 		return entries.get(entries.size() - 1);
 	}
 
-	private Address selectPeer() {
+	private PeerCap selectPeer() {
 		if (tmanPartners.isEmpty()) {
 			return null;
 		} else if (tmanPartners.size() == 1) {
-			return tmanPartners.get(0).getAddress();
+			return tmanPartners.get(0).getPeerCap();
 		} else {
 
-			ArrayList<PeerCap> rankedView = selectView(generateMyPeerCap(),
-					new HashSet<PeerCap>(tmanPartners), psi);
+			ArrayList<PeerDescriptor> rankedView = selectView(
+					generateMyPeerCap(), new HashSet<PeerDescriptor>(
+							tmanPartners), psi);
 
 			int q = r.nextInt(rankedView.size());
 
-			Address peerSelected = rankedView.get(q).getAddress();
+			PeerCap peerSelected = rankedView.get(q).getPeerCap();
 
 			return peerSelected;
 		}

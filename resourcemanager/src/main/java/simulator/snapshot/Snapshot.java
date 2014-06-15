@@ -24,6 +24,8 @@ public class Snapshot {
 	private static int probes;
 	private static float load;
 
+	public static boolean PRINT_TO_SCREEN = false;
+
 	public static void init(int numProbes, float loadF) {
 		probes = numProbes;
 		load = loadF;
@@ -96,7 +98,8 @@ public class Snapshot {
 		String roundResults = load + "\t" + probes + "\t" + averageQueue + "\t"
 				+ percentile99;
 
-		System.err.println(roundResults);
+		if (PRINT_TO_SCREEN)
+			System.err.println(roundResults);
 
 		try {
 			PrintWriter out = new PrintWriter(new BufferedWriter(

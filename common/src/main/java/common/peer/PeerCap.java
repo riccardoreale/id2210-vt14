@@ -14,8 +14,10 @@ public class PeerCap implements Comparable<PeerCap> {
 	public final int availableCpu;
 	public final int availableMemory;
 
+	public final int queueLength;
+
 	public PeerCap(Address address, int maxCpu, int maxMemory,
-			int availableCpu, int availableMemory) {
+			int availableCpu, int availableMemory, int queueLength) {
 		super();
 		this.address = address;
 		this.maxCpu = maxCpu;
@@ -23,6 +25,8 @@ public class PeerCap implements Comparable<PeerCap> {
 
 		this.availableCpu = availableCpu;
 		this.availableMemory = availableMemory;
+
+		this.queueLength = queueLength;
 	}
 
 	public boolean canRun(int nCpus, int memoryMb) {
@@ -74,6 +78,10 @@ public class PeerCap implements Comparable<PeerCap> {
 		return availableMemory;
 	}
 
+	public int getQueueLength() {
+		return queueLength;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -83,5 +91,12 @@ public class PeerCap implements Comparable<PeerCap> {
 				.append("]");
 
 		return sb.toString();
+	}
+
+	public int getUtilityFunction() {
+		int u = getAvailableCpu();
+		// if (u == 0)
+		// u -= queueLength;
+		return u;
 	}
 }

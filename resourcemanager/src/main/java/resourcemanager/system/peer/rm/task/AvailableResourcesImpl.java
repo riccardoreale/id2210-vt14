@@ -81,4 +81,9 @@ public class AvailableResourcesImpl implements AvailableResources {
 	public int getTotalMemory() {
 		return totalMemory;
 	}
+
+	@Override
+	public int getQueueLength() {
+		return workingQueue.getWaiting().size();
+	}
 }

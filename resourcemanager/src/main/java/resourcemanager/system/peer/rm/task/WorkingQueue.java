@@ -81,6 +81,10 @@ public class WorkingQueue {
 
 	}
 
+	public Queue<TaskPlaceholder> getWaiting() {
+		return waiting;
+	}
+
 	public List<Task> getDone() {
 		return done;
 	}

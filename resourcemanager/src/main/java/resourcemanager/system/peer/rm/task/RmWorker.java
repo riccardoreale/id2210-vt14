@@ -16,6 +16,28 @@ import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 
 public class RmWorker extends ComponentDefinition {
+
+	public class ObjectId {
+
+		public String toString() {
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.append("[");
+			stringBuilder.append(res.getNumFreeCpus());
+			stringBuilder.append("/");
+			stringBuilder.append(res.getWorkingQueue().running.size());
+			stringBuilder.append("/");
+			stringBuilder.append(res.getWorkingQueue().waiting.size());
+			stringBuilder.append("/");
+			stringBuilder.append(waitingConfirmation.size());
+			stringBuilder.append(" ");
+			stringBuilder.append(self.getIp());
+			stringBuilder.append("]");
+
+			return stringBuilder.toString();
+		}
+
+	}
+
 	private static final Logger log = LoggerFactory.getLogger(RmWorker.class);
 
 	Positive<Timer> timerPort = positive(Timer.class);
@@ -24,6 +46,7 @@ public class RmWorker extends ComponentDefinition {
 
 	private AvailableResourcesImpl res = null;
 	private Address self;
+	private ObjectId selfId = new ObjectId();
 
 	private Map<Long, TaskPlaceholder> waitingConfirmation = new HashMap<Long, TaskPlaceholder>();
 
@@ -35,11 +58,8 @@ public class RmWorker extends ComponentDefinition {
 		subscribe(handleTaskDone, timerPort);
 	}
 
-	private String getId() {
-		return "[" + res.getNumFreeCpus() + "/"
-				+ res.getWorkingQueue().running.size() + "/"
-				+ res.getWorkingQueue().waiting.size() + "/"
-				+ waitingConfirmation.size() + " " + self.getIp() + "]";
+	private ObjectId getId() {
+		return selfId;
 	}
 
 	Handler<WorkerInit> handleInit = new Handler<WorkerInit>() {
@@ -92,9 +112,8 @@ public class RmWorker extends ComponentDefinition {
 						.remove(event.referencId);
 
 				res.release(remove.getNumCpus(), remove.getMemoryInMbs());
-				// res.workingQueue.running.remove(remove.getId());
 
-				log.debug(getId() + " REMOVED " + remove.getId());
+				log.debug("{} REMOVED {}", getId(), remove.getId());
 
 				pop();
 
@@ -161,14 +180,14 @@ public class RmWorker extends ComponentDefinition {
 
 		res.workingQueue.running.put(placeholder.getId(), placeholder);
 
-		log.info(getId() + " Allocated {}", placeholder.getId());
+		log.info("{} Allocated {}", getId(), placeholder.getId());
 
 		runTask(placeholder);
 	}
 
 	private void runTask(Task t) {
-		log.debug(getId() + " RUNNING " + t.getId() + " (" + res.numFreeCpus
-				+ "/" + res.freeMemInMbs + ")");
+		log.debug("{} RUNNING {} ({}/{})", new Object[] { getId(), t.getId(),
+				res.numFreeCpus, res.freeMemInMbs });
 		t.allocate();
 		ScheduleTimeout tout = new ScheduleTimeout(t.getTimeToHoldResource());
 		tout.setTimeoutEvent(new TaskDone(tout, t.getId()));

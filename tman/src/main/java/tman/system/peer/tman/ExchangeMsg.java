@@ -9,22 +9,24 @@ import se.sics.kompics.timer.Timeout;
 
 import common.peer.PeerCap;
 
+import cyclon.system.peer.cyclon.PeerDescriptor;
+
 public class ExchangeMsg {
 
 	public static class Request extends Message {
 
 		private static final long serialVersionUID = 8493601671018888143L;
-		private final ArrayList<PeerCap> randomBuffer;
+		private final ArrayList<PeerDescriptor> randomBuffer;
 		private PeerCap sourcePeerCap;
 
 		public Request(Address source, Address destination,
-				ArrayList<PeerCap> randomBuffer, PeerCap sourcePeerCap) {
+				ArrayList<PeerDescriptor> randomBuffer, PeerCap sourcePeerCap) {
 			super(source, destination);
 			this.randomBuffer = randomBuffer;
 			this.sourcePeerCap = sourcePeerCap;
 		}
 
-		public ArrayList<PeerCap> getRandomBuffer() {
+		public ArrayList<PeerDescriptor> getRandomBuffer() {
 			return randomBuffer;
 		}
 
@@ -36,15 +38,15 @@ public class ExchangeMsg {
 	public static class Response extends Message {
 
 		private static final long serialVersionUID = -5022051054665787770L;
-		private final ArrayList<PeerCap> selectedBuffer;
+		private final ArrayList<PeerDescriptor> selectedBuffer;
 
 		public Response(Address source, Address destination,
-				ArrayList<PeerCap> selectedBuffer) {
+				ArrayList<PeerDescriptor> selectedBuffer) {
 			super(source, destination);
 			this.selectedBuffer = selectedBuffer;
 		}
 
-		public ArrayList<PeerCap> getSelectedBuffer() {
+		public ArrayList<PeerDescriptor> getSelectedBuffer() {
 			return selectedBuffer;
 		}
 
