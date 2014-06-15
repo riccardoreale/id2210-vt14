@@ -21,21 +21,35 @@ public class Resources {
 		}
 	}
 
+	private static class AllocateBase extends Event {
+		public final Task task;
+		public final Address taskMaster;
+
+		public AllocateBase(Address taskMaster, Task t) {
+			this.task = t;
+			this.taskMaster = taskMaster;
+		}
+	}
+
+	public static class AllocateDirectly extends AllocateBase {
+		public AllocateDirectly(Address taskMaster, Task t) {
+			super(taskMaster, t);
+		}
+	}
+
+	public static class Allocate extends AllocateBase {
+		public final long originalTaskId;
+		public Allocate(Address taskMaster, long originalTaskId, Task t) {
+			super(taskMaster, t);
+			this.originalTaskId = originalTaskId;
+		}
+	}
+
 	public static class Confirm extends Event {
 		public final TaskPlaceholder.Deferred tph;
 
 		public Confirm(TaskPlaceholder.Deferred tph) {
 			this.tph = tph;
-		}
-	}
-
-	public static class Allocate extends Event {
-		public final Task task;
-		public final Address taskMaster;
-
-		public Allocate(Address taskMaster, Task t) {
-			this.task = t;
-			this.taskMaster = taskMaster;
 		}
 	}
 

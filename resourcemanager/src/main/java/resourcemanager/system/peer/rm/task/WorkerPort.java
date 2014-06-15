@@ -6,6 +6,7 @@ import se.sics.kompics.PortType;
 public class WorkerPort extends PortType {
 	{
 		positive(Resources.Allocate.class);
+		positive(Resources.AllocateDirectly.class);
 		positive(Resources.Reserve.class);
 		positive(Resources.Cancel.class);
 		negative(Resources.Confirm.class);

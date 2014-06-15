@@ -11,10 +11,13 @@ public class Probing {
 	public static class Request extends Message {
 		private static final long serialVersionUID = 6925804371732048383L;
 		public final TaskResources required;
+		public final long taskId;
 
-		protected Request(Address self, Address target, TaskResources required) {
+		protected Request(Address self, Address target, TaskResources required,
+				long taskId) {
 			super(self, target);
 			this.required = required;
+			this.taskId = taskId;
 		}
 	}
 	

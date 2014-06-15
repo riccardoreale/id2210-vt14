@@ -17,8 +17,8 @@ import se.sics.kompics.timer.Timer;
 public class RmWorker extends ComponentDefinition {
 	private static final Logger log = LoggerFactory.getLogger(RmWorker.class);
 
-	Positive<Timer> timerPort = positive(Timer.class);
-	Positive<WorkerPort> workerPort = positive(WorkerPort.class);
+	private Positive<Timer> timerPort = positive(Timer.class);
+	private Positive<WorkerPort> workerPort = positive(WorkerPort.class);
 
 	private AvailableResourcesImpl res = null;
 	private Address self;
@@ -28,6 +28,7 @@ public class RmWorker extends ComponentDefinition {
 	public RmWorker() {
 		subscribe(handleInit, control);
 		subscribe(handleReserve, workerPort);
+		subscribe(handleAllocateDirectly, workerPort);
 		subscribe(handleAllocate, workerPort);
 		subscribe(handleCancel, workerPort);
 		subscribe(handleTaskDone, timerPort);
@@ -53,8 +54,16 @@ public class RmWorker extends ComponentDefinition {
 		@Override
 		public void handle(Resources.Reserve event) {
 			TaskPlaceholder.Deferred tph = new TaskPlaceholder.Deferred(event.taskId,
-				event.taskMaster, event.required
-			);
+				event.taskMaster, event.required);
+			res.workingQueue.waiting.add(tph);
+			pop();
+		}
+	};
+
+	Handler<Resources.AllocateDirectly> handleAllocateDirectly = new Handler<Resources.AllocateDirectly>() {
+		@Override
+		public void handle(Resources.AllocateDirectly event) {
+			TaskPlaceholder.Direct tph = new TaskPlaceholder.Direct(event.taskMaster, event.task);
 			res.workingQueue.waiting.add(tph);
 			pop();
 		}
@@ -63,21 +72,14 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Allocate> handleAllocate = new Handler<Resources.Allocate>() {
 		@Override
 		public void handle(Resources.Allocate event) {
-			TaskPlaceholder.Deferred placeholder = waitingConfirmation.remove(event.task.id);
-			if (placeholder != null) {
-				log.info("Allocating waiting task");
-				res.release(placeholder.getNumCpus(), placeholder.getMemoryInMbs());
-				res.allocate(event.task.required.numCpus, event.task.required.memoryInMbs);
-				TaskPlaceholder.Direct run = new TaskPlaceholder.Direct(event.taskMaster, event.task);
-				res.workingQueue.running.put(event.task.id, run);
-				runTask(event.task);
-			} else {
-				log.info("Direct allocation of task");
-				TaskPlaceholder.Direct tph = new TaskPlaceholder.Direct(event.taskMaster, event.task);
-				res.workingQueue.waiting.add(tph);
-				pop();
-			}
-
+			TaskPlaceholder.Deferred placeholder = waitingConfirmation.remove(event.originalTaskId);
+			assert placeholder != null;
+			log.info("Allocating waiting task");
+			res.release(placeholder.getNumCpus(), placeholder.getMemoryInMbs());
+			res.allocate(event.task.required.numCpus, event.task.required.memoryInMbs);
+			TaskPlaceholder.Direct run = new TaskPlaceholder.Direct(event.taskMaster, event.task);
+			res.workingQueue.running.put(event.task.id, run);
+			runTask(event.task);
 		}
 	};
 
@@ -149,7 +151,6 @@ public class RmWorker extends ComponentDefinition {
 		waitingConfirmation.put(t.getId(), t);
 
 		trigger(new Resources.Confirm(t), workerPort);
-
 	}
 
 	private void allocateDirectly(TaskPlaceholder.Direct placeholder) {

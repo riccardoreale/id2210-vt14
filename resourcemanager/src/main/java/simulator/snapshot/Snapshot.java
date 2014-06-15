@@ -71,7 +71,7 @@ public class Snapshot {
 			AvailableResourcesImpl res = (AvailableResourcesImpl) p
 					.getAvailableResources();
 
-			List<Task> done = res.getWorkingQueue().getDone();
+			List<Task> done = res.getWorkingQueue().done;
 			totalDone += done.size();
 			for (Task task : done) {
 				totalTime += task.getTotalTime();

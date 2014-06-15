@@ -112,10 +112,10 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		public void handle(ClientRequestResource event) {
 			Component peer = null;
 			if (dataCenterConfiguration.omniscent) {
-				peer = omniscentSelector(event.getNumCpus(),
-						event.getMemoryInMbs());
+				peer = omniscentSelector(event.required.numCpus,
+						event.required.memoryInMbs);
 			} else {
-				Long successor = ringNodes.getNode(event.getId());
+				Long successor = ringNodes.getNode(event.taskId);
 				peer = peers.get(successor);
 			}
 			trigger(event, peer.getNegative(RmPort.class));
