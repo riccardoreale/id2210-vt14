@@ -86,6 +86,10 @@ public class Detector extends ComponentDefinition {
 	private Handler<FdetPort.Subscribe> handleSubscribe = new Handler<FdetPort.Subscribe>() {
 		@Override
 		public void handle(FdetPort.Subscribe event) {
+			if (event.ref == conf.self) {	/* Corner case ... */
+				return;
+			}
+
 			Info stored = tracked.get(event.ref);
 			if (stored == null) {
 				stored = new Info();
@@ -101,6 +105,9 @@ public class Detector extends ComponentDefinition {
 	private Handler<FdetPort.Unsubscribe> handleUnsubscribe = new Handler<FdetPort.Unsubscribe>() {
 		@Override
 		public void handle(FdetPort.Unsubscribe event) {
+			if (event.ref == conf.self) { 	/* Corner case ... */
+				return;
+			}
 			Info stored = tracked.get(event.ref);
 			if (stored == null) return;
 			if (stored.refcount > 1) {

@@ -12,9 +12,9 @@ import java.util.Queue;
 
 public class WorkingQueue {
 
-	Map<Long, Task> running = new HashMap<Long, Task>();
-	Queue<TaskPlaceholder> waiting = new LinkedList<TaskPlaceholder>();
-	private List<Task> done = new LinkedList<Task>();
+	public final Map<Long, TaskPlaceholder.Direct> running = new HashMap<Long, TaskPlaceholder.Direct>();
+	public final Queue<TaskPlaceholder.Base> waiting = new LinkedList<TaskPlaceholder.Base>();
+	public final List<Task> done = new LinkedList<Task>();
 
 	public int getWorkingQueueTime(int tmpCpu, int tmpMem, int numCpus,
 			int memInMbs) {
@@ -26,15 +26,17 @@ public class WorkingQueue {
 		final long now = System.currentTimeMillis();
 
 		// lists of running and waiting
-		Iterator<TaskPlaceholder> waitingIterator = waiting.iterator();
-		ArrayList<Task> listRunning = new ArrayList<Task>(running.values());
-		Task nextTask = null;
+		Iterator<TaskPlaceholder.Base> waitingIterator = waiting.iterator();
+		ArrayList<TaskPlaceholder.Direct> listRunning = new ArrayList<TaskPlaceholder.Direct>(running.values());
+		TaskPlaceholder.Direct nextPlaceHolder = null;
 
 		// first we sort running tasks by the fastest to finish
-		Collections.sort(listRunning, new Comparator<Task>() {
+		Collections.sort(listRunning, new Comparator<TaskPlaceholder.Direct>() {
 			@Override
-			public int compare(Task o1, Task o2) {
-				return (int) ((o1.timeToHoldResource - (now - o1.allocateTime)) - (o2.timeToHoldResource - (now - o2.allocateTime)));
+			public int compare(TaskPlaceholder.Direct o1, TaskPlaceholder.Direct o2) {
+				Task t1 = o1.task;
+				Task t2 = o2.task;
+				return (int) ((t1.timeToHoldResource - (now - t1.allocateTime)) - (t2.timeToHoldResource - (now - t2.allocateTime)));
 			}
 		});
 
@@ -43,18 +45,18 @@ public class WorkingQueue {
 
 			// executing a task means increase the virtual time
 			// and release resources
-			Task t = listRunning.get(i);
+			Task t = listRunning.get(i).task;
 			workingTime += t.timeToHoldResource - (now - t.allocateTime);
-			tmpCpu += t.numCpus;
-			tmpMem += t.memoryInMbs;
+			tmpCpu += t.required.numCpus;
+			tmpMem += t.required.memoryInMbs;
 
 			// once resources are released we check if there is a waiting
 			// task
-			if (nextTask == null) {
+			if (nextPlaceHolder == null) {
 				if (waitingIterator.hasNext()) {
-					TaskPlaceholder tmp = waitingIterator.next();
-					nextTask = new Task(tmp.id, tmp.numCpus, tmp.memoryInMbs,
-							tmp.timeToHoldResource);
+					// This cast should never fail, as we run it in omniscent mode
+					TaskPlaceholder.Direct tmp = (TaskPlaceholder.Direct) waitingIterator.next();
+					nextPlaceHolder = new TaskPlaceholder.Direct(tmp.taskMaster, tmp.task.copy());
 				}
 			}
 
@@ -63,12 +65,13 @@ public class WorkingQueue {
 			// task
 			// if there are no other tasks, we "execute" running tasks until
 			// the requested task can be allocated
-			if (nextTask != null) {
-				if (tmpCpu >= nextTask.numCpus
-						&& tmpMem >= nextTask.memoryInMbs) {
-					listRunning.add(nextTask);
+			if (nextPlaceHolder != null) {
+				Task nextTask = nextPlaceHolder.task;
+				if (tmpCpu >= nextTask.required.numCpus
+						&& tmpMem >= nextTask.required.memoryInMbs) {
+					listRunning.add(nextPlaceHolder);
 					nextTask.allocateTime = now;
-					nextTask = null;
+					nextPlaceHolder = null;
 				}
 			} else if (tmpCpu >= numCpus && tmpMem >= memInMbs)
 				return workingTime;
@@ -79,10 +82,6 @@ public class WorkingQueue {
 		// happened). anyhow we return "infinite" time
 		return Integer.MAX_VALUE;
 
-	}
-
-	public List<Task> getDone() {
-		return done;
 	}
 
 }

@@ -17,17 +17,18 @@ import se.sics.kompics.timer.Timer;
 public class RmWorker extends ComponentDefinition {
 	private static final Logger log = LoggerFactory.getLogger(RmWorker.class);
 
-	Positive<Timer> timerPort = positive(Timer.class);
-	Positive<WorkerPort> workerPort = positive(WorkerPort.class);
+	private Positive<Timer> timerPort = positive(Timer.class);
+	private Positive<WorkerPort> workerPort = positive(WorkerPort.class);
 
 	private AvailableResourcesImpl res = null;
 	private Address self;
 
-	private Map<Long, TaskPlaceholder> waitingConfirmation = new HashMap<Long, TaskPlaceholder>();
+	private Map<Long, TaskPlaceholder.Deferred> waitingConfirmation = new HashMap<Long, TaskPlaceholder.Deferred>();
 
 	public RmWorker() {
 		subscribe(handleInit, control);
 		subscribe(handleReserve, workerPort);
+		subscribe(handleAllocateDirectly, workerPort);
 		subscribe(handleAllocate, workerPort);
 		subscribe(handleCancel, workerPort);
 		subscribe(handleTaskDone, timerPort);
@@ -52,8 +53,18 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Reserve> handleReserve = new Handler<Resources.Reserve>() {
 		@Override
 		public void handle(Resources.Reserve event) {
-			res.workingQueue.waiting.add(event.getTask());
+			TaskPlaceholder.Deferred tph = new TaskPlaceholder.Deferred(event.taskId,
+				event.taskMaster, event.required);
+			res.workingQueue.waiting.add(tph);
+			pop();
+		}
+	};
 
+	Handler<Resources.AllocateDirectly> handleAllocateDirectly = new Handler<Resources.AllocateDirectly>() {
+		@Override
+		public void handle(Resources.AllocateDirectly event) {
+			TaskPlaceholder.Direct tph = new TaskPlaceholder.Direct(event.taskMaster, event.task);
+			res.workingQueue.waiting.add(tph);
 			pop();
 		}
 	};
@@ -61,65 +72,52 @@ public class RmWorker extends ComponentDefinition {
 	Handler<Resources.Allocate> handleAllocate = new Handler<Resources.Allocate>() {
 		@Override
 		public void handle(Resources.Allocate event) {
-			if (waitingConfirmation.containsKey(event.referenceId)) {
-
-				TaskPlaceholder placeholder = waitingConfirmation
-						.remove(event.referenceId);
-				res.release(placeholder.getNumCpus(),
-						placeholder.getMemoryInMbs());
-
-				res.allocate(event.getTask().getNumCpus(), event.getTask()
-						.getMemoryInMbs());
-
-				res.workingQueue.running.put(event.getTask().getId(),
-						event.task);
-
-				runTask(event.task);
-
-			} else
-				log.warn("AAAA");
+			TaskPlaceholder.Deferred placeholder = waitingConfirmation.remove(event.originalTaskId);
+			assert placeholder != null;
+			log.info("Allocating waiting task");
+			res.release(placeholder.getNumCpus(), placeholder.getMemoryInMbs());
+			res.allocate(event.task.required.numCpus, event.task.required.memoryInMbs);
+			TaskPlaceholder.Direct run = new TaskPlaceholder.Direct(event.taskMaster, event.task);
+			res.workingQueue.running.put(event.task.id, run);
+			runTask(event.task);
 		}
 	};
 
 	Handler<Resources.Cancel> handleCancel = new Handler<Resources.Cancel>() {
 		@Override
 		public void handle(Resources.Cancel event) {
-			if (waitingConfirmation.containsKey(event.referenceId)) {
-
-				TaskPlaceholder remove = waitingConfirmation
-						.remove(event.referenceId);
-
-				res.release(remove.getNumCpus(), remove.getMemoryInMbs());
+			TaskPlaceholder.Deferred placeholder = waitingConfirmation.remove(event.taskId);
+			if (placeholder != null) {
+				res.release(placeholder.required.numCpus, placeholder.required.memoryInMbs);
 				// res.workingQueue.running.remove(remove.getId());
-
-				log.debug(getId() + " REMOVED " + remove.getId());
-
+				log.debug(getId() + " REMOVED " + event.taskId);
 				pop();
-
-			} else
-				log.warn("CCCC");
+			} else {
+				log.warn("Cancelling a non-waiting task?");
+			}
 		}
 	};
 
 	Handler<TaskDone> handleTaskDone = new Handler<TaskDone>() {
 		@Override
 		public void handle(TaskDone event) {
-			Task t = (Task) res.workingQueue.running.remove(event.referenceId);
-			if (t == null)
+			TaskPlaceholder.Direct tph = res.workingQueue.running.remove(event.referenceId);
+			if (tph == null)
 				log.error(getId() + " " + event.referenceId);
-			assert t != null;
+			assert tph != null;
+			Task t = tph.task;
 			t.deallocate();
-			res.release(t.getNumCpus(), t.getMemoryInMbs());
-			res.workingQueue.getDone().add(t);
+			res.release(t.required.numCpus, t.required.memoryInMbs);
+			res.workingQueue.done.add(t);
 			log.info(
 					"{} Done {}, QueueTime={}, TotalTime={}",
 					new Object[] {
 							getId(),
-							t.getId(),
+							t.id,
 							t.getQueueTime(),
-							(float) (t.getTimeToHoldResource())
+							(float) (t.timeToHoldResource)
 									/ t.getTotalTime() });
-			trigger(new Resources.Completed(t.getId()), workerPort);
+			trigger(new Resources.Completed(tph.taskMaster, t), workerPort);
 
 			/* last */
 			pop();
@@ -127,7 +125,7 @@ public class RmWorker extends ComponentDefinition {
 	};
 
 	private void pop() {
-		TaskPlaceholder t = (TaskPlaceholder) res.workingQueue.waiting.peek();
+		TaskPlaceholder.Base t = res.workingQueue.waiting.peek();
 		if (t == null) {
 			// FIXME: probably this could be a single assertion: !(a && b) || c
 			if (res.workingQueue.running.size() == 0)
@@ -138,27 +136,24 @@ public class RmWorker extends ComponentDefinition {
 		if (res.isAvailable(t.getNumCpus(), t.getMemoryInMbs())) {
 			res.workingQueue.waiting.poll();
 
-			if (t.isExecuteDirectly())
-				allocateDirectly(t);
-			else
-				getConfirm(t);
+			if (t.isExecuteDirectly()) {
+				allocateDirectly((TaskPlaceholder.Direct)t);
+			} else {
+				getConfirm((TaskPlaceholder.Deferred)t);
+			}
 		}
-		// FIXME. The "else" here is missing because it could be the case
-		// that the entered task is small enough to be scheduled
-		// immediately.
 	}
 
-	private void getConfirm(TaskPlaceholder t) {
+	private void getConfirm(TaskPlaceholder.Deferred t) {
 		// here we temporary block resources
 		// and ask for confirmation
 		res.allocate(t.getNumCpus(), t.getMemoryInMbs());
-		waitingConfirmation.put(t.id, t);
+		waitingConfirmation.put(t.getId(), t);
 
 		trigger(new Resources.Confirm(t), workerPort);
-
 	}
 
-	private void allocateDirectly(TaskPlaceholder placeholder) {
+	private void allocateDirectly(TaskPlaceholder.Direct placeholder) {
 		// here we allocate resources and start the timers
 		res.allocate(placeholder.getNumCpus(), placeholder.getMemoryInMbs());
 
@@ -166,15 +161,15 @@ public class RmWorker extends ComponentDefinition {
 
 		log.info(getId() + " Allocated {}", placeholder.getId());
 
-		runTask(placeholder);
+		runTask(placeholder.task);
 	}
 
 	private void runTask(Task t) {
-		log.debug(getId() + " RUNNING " + t.getId() + " (" + res.numFreeCpus
+		log.debug(getId() + " RUNNING " + t.id + " (" + res.numFreeCpus
 				+ "/" + res.freeMemInMbs + ")");
 		t.allocate();
-		ScheduleTimeout tout = new ScheduleTimeout(t.getTimeToHoldResource());
-		tout.setTimeoutEvent(new TaskDone(tout, t.getId()));
+		ScheduleTimeout tout = new ScheduleTimeout(t.timeToHoldResource);
+		tout.setTimeoutEvent(new TaskDone(tout, t.id));
 		trigger(tout, timerPort);
 	}
 

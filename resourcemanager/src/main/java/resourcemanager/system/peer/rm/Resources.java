@@ -1,68 +1,73 @@
 package resourcemanager.system.peer.rm;
 
+import common.simulation.TaskResources;
+
 import resourcemanager.system.peer.rm.task.Task;
 import resourcemanager.system.peer.rm.task.TaskPlaceholder;
 import se.sics.kompics.Event;
+import se.sics.kompics.address.Address;
 
 public class Resources {
 
-	private static class TaskEvent extends Event {
+	public static class Reserve extends Event {
+		public final long taskId;
+		public final Address taskMaster;
+		public final TaskResources required;
 
-		private TaskPlaceholder task;
+		public Reserve(Address taskMaster, long taskId, TaskResources required) {
+			this.taskMaster = taskMaster;
+			this.required = required;
+			this.taskId = taskId;
+		}
+	}
 
-		public TaskEvent(TaskPlaceholder t) {
+	private static class AllocateBase extends Event {
+		public final Task task;
+		public final Address taskMaster;
+
+		public AllocateBase(Address taskMaster, Task t) {
 			this.task = t;
-		}
-
-		public TaskPlaceholder getTask() {
-			return task;
+			this.taskMaster = taskMaster;
 		}
 	}
 
-	public static class Reserve extends TaskEvent {
-
-		public Reserve(TaskPlaceholder t) {
-			super(t);
+	public static class AllocateDirectly extends AllocateBase {
+		public AllocateDirectly(Address taskMaster, Task t) {
+			super(taskMaster, t);
 		}
 	}
 
-	public static class Confirm extends TaskEvent {
-
-		public Confirm(TaskPlaceholder t) {
-			super(t);
-		}
-	}
-	
-	private static class RefEvent extends Event {
-		public final long referenceId;
-		
-		public RefEvent(long referenceId) {
-			this.referenceId = referenceId;
+	public static class Allocate extends AllocateBase {
+		public final long originalTaskId;
+		public Allocate(Address taskMaster, long originalTaskId, Task t) {
+			super(taskMaster, t);
+			this.originalTaskId = originalTaskId;
 		}
 	}
 
-	public static class Allocate extends RefEvent {
-		public Task task;
+	public static class Confirm extends Event {
+		public final TaskPlaceholder.Deferred tph;
 
-		public Allocate(long referenceId, Task t) {
-			super(referenceId);
-			this.task = t;
-		}
-
-		public Task getTask() {
-			return task;
+		public Confirm(TaskPlaceholder.Deferred tph) {
+			this.tph = tph;
 		}
 	}
 
-	public static class Cancel extends RefEvent {
-		public Cancel(long referenceId) {
-			super(referenceId);
+	public static class Cancel extends Event {
+		public final long taskId;
+		public Cancel(long taskId) {
+			this.taskId = taskId;
 		}
 	}
 
-	public static class Completed extends RefEvent {
-		public Completed(long referenceId) {
-			super(referenceId);
+	public static class Completed extends Event {
+		public final Task task;
+		public final Address taskMaster;
+
+		public Completed(Address taskMaster, Task task) {
+			this.task = task;
+			this.taskMaster = taskMaster;
 		}
 	}
+
 }
