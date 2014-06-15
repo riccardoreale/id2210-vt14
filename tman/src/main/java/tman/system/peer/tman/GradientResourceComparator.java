@@ -12,7 +12,7 @@ import cyclon.system.peer.cyclon.PeerDescriptor;
 public class GradientResourceComparator implements Comparator<PeerDescriptor> {
 
 	private static final boolean USE_GREEDY = false;
-	private static final double TEMPERATURE = 3;
+	private static final double TEMPERATURE_GRADIENT = 3;
 
 	private int valueRef;
 	private SoftMax softMax;
@@ -25,7 +25,7 @@ public class GradientResourceComparator implements Comparator<PeerDescriptor> {
 		for (PeerDescriptor pDescriptor : list) {
 			pCapList.add(pDescriptor.getPeerCap());
 		}
-		softMax = new SoftMax(pCapList, TEMPERATURE, r);
+		softMax = new SoftMax(pCapList, TEMPERATURE_GRADIENT, r);
 	}
 
 	/*

@@ -93,6 +93,17 @@ public class PeerCap implements Comparable<PeerCap> {
 		return sb.toString();
 	}
 
+	/**
+	 * right now the utility function uses only the available cpu since the load
+	 * study is based only on the cpu. We didn't search for a better solution
+	 * comprehensive of the memory because anyhow random walks seems to perform
+	 * better.
+	 * 
+	 * Adding the waiting queue lenght in the utility function doesn't improve
+	 * results since the queued tasks are just placeholder and may be cancelled.
+	 * 
+	 * @return
+	 */
 	public int getUtilityFunction() {
 		int u = getAvailableCpu();
 		// if (u == 0)

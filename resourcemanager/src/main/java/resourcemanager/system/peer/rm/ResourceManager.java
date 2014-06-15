@@ -1,7 +1,6 @@
 package resourcemanager.system.peer.rm;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -43,7 +42,6 @@ import common.utils.SoftMax;
 
 import cyclon.system.peer.cyclon.CyclonSample;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
-import cyclon.system.peer.cyclon.PeerDescriptor;
 
 /**
  * Should have some comments here.
@@ -70,8 +68,25 @@ public final class ResourceManager extends ComponentDefinition {
 	private static final Logger log = LoggerFactory
 			.getLogger(ResourceManager.class);
 
-	public static double TEMPERATURE = 0.5;
-	public static boolean USE_GRADIENT = true;
+	/**
+	 * the temperature for the SoftMax process that selects the next hop to send
+	 * a probe to.<br>
+	 * <br>
+	 * A value of 0 means GREEDY, it will select the peer that reports the
+	 * highest utility function.<br>
+	 * A value >> 0 (e.g. 100) will select a random peer
+	 */
+	public static double TEMPERATURE_PROBING = 1;
+
+	/**
+	 * if <b>false</b> will use the Cyclon random view to select peer for probes <br>
+	 * if <b>true</b> will use the Gradient view
+	 */
+	public static boolean USE_GRADIENT = false;
+
+	/**
+	 * maximum number of HOPS a probe can be propagated
+	 */
 	public static int MAX_HOPS = 5;
 
 	private final Positive<RmPort> indexPort = positive(RmPort.class);
@@ -81,7 +96,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Positive<TManSamplePort> tmanPort = positive(TManSamplePort.class);
 
 	private final ArrayList<PeerCap> neighbours = new ArrayList<PeerCap>();
-	private final Set<Long> probes = new HashSet<Long>();
+	private final Set<Long> depositedProbes = new HashSet<Long>();
 
 	private Address self;
 	private ObjectId selfId = new ObjectId();
@@ -94,22 +109,6 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Queue<Task> waiting = new LinkedList<Task>();
 	private final Map<Long, Address> assigned = new HashMap<Long, Address>();
 	private final Map<Address, TreeMap<Long, TaskPlaceholder>> outstanding = new TreeMap<Address, TreeMap<Long, TaskPlaceholder>>();
-
-	// private AvailableResources availableResources;
-	// private TaskQueue queue;
-	// When you partition the index you need to find new nodes
-	// This is a routing table maintaining a list of pairs in each partition.
-	private Map<Integer, List<PeerDescriptor>> routingTable;
-	Comparator<PeerDescriptor> peerAgeComparator = new Comparator<PeerDescriptor>() {
-		@Override
-		public int compare(PeerDescriptor t, PeerDescriptor t1) {
-			if (t.getAge() > t1.getAge()) {
-				return 1;
-			} else {
-				return -1;
-			}
-		}
-	};
 
 	public ResourceManager() {
 
@@ -171,20 +170,23 @@ public final class ResourceManager extends ComponentDefinition {
 		assert !waiting.contains(t);
 		waiting.add(t);
 
+		// first it checks if it can execute a task itself
 		if (res.isAvailable(t.getNumCpus(), t.getMemoryInMbs())) {
 
 			trigger(new Probing.Request(self, self, t, self, 10), networkPort);
 			log.debug("{} SENDING PROBE FOR {} TO  MYSELF", getId(), t.getId());
 
 		} else {
-			// number of probes
-			int put = configuration.getProbes();
+			// otherwise it sends N new probes to selected peers
 
+			int put = configuration.getProbes();
 			List<PeerCap> chosen = new ArrayList<PeerCap>();
 			List<Address> chosenAddress = new ArrayList<Address>();
 
 			while (put-- > 0) {
 
+				// we select the next hop excluding the already selected
+				// addresses
 				PeerCap cap = selectNextHop(t, chosenAddress);
 				if (cap == null)
 					break;
@@ -202,6 +204,15 @@ public final class ResourceManager extends ComponentDefinition {
 
 	}
 
+	/**
+	 * filters out excluded peers from the neighbour view and uses SoftMax to
+	 * pick the best peer (based on the Temperature)
+	 * 
+	 * @param t
+	 * @param exclude
+	 *            list of peers to exclude
+	 * @return the selected node
+	 */
 	private PeerCap selectNextHop(final TaskPlaceholder t,
 			final List<Address> exclude) {
 
@@ -227,11 +238,23 @@ public final class ResourceManager extends ComponentDefinition {
 			 * based on temperature we can return greedy (best utility) or
 			 * completely random
 			 */
-			SoftMax softMax = new SoftMax(sel, TEMPERATURE, random);
+			SoftMax softMax = new SoftMax(sel, TEMPERATURE_PROBING, random);
 			return softMax.pickPeer();
 		}
 	}
 
+	/**
+	 * called when a peer request a confirmation and therefore has available
+	 * resources.<br>
+	 * this method will send a task allocation for the first pending task that
+	 * matches the available resources on that node.<br>
+	 * 
+	 * If there are no pending task it sends a cancel to release the resources
+	 * on that node
+	 * 
+	 * @param peer
+	 * @param reserved
+	 */
 	private void serve(Address peer, Task reserved) {
 		Iterator<Task> i = waiting.iterator();
 		boolean isUsed = false;
@@ -294,20 +317,28 @@ public final class ResourceManager extends ComponentDefinition {
 		return toReturn;
 	}
 
+	/**
+	 * handling a probe<br>
+	 * - checks if it has resources to execute the task immediately<br>
+	 * - checks if the probe has reached the max hops<br>
+	 * - checks if it has already accepted a probe for the same task <br>
+	 * <br>
+	 * If it can't deposit, it selects one single next peer and propagates the
+	 * probe to it <br>
+	 * if it can deposit, it sends the task down to his own Worker and send a
+	 * GotRequest to the master to notify him that the task his added in his
+	 * waiting queue
+	 */
 	private final Handler<Probing.Request> handleProbingRequest = new Handler<Probing.Request>() {
 		@Override
 		public void handle(Probing.Request event) {
 
 			boolean depositProbe = true;
 
-			/*
-			 * check if we can accept it, or reached the max number of
-			 * propagations or if we already got it
-			 */
 			if (!res.isAvailable(event.task.getNumCpus(),
 					event.task.getMemoryInMbs())
 					&& event.count < MAX_HOPS
-					|| probes.contains(event.task.getId())) {
+					|| depositedProbes.contains(event.task.getId())) {
 
 				ArrayList<Address> exclude = new ArrayList<Address>();
 				exclude.add(event.getSource());
@@ -329,7 +360,7 @@ public final class ResourceManager extends ComponentDefinition {
 			 */
 			if (depositProbe) {
 				log.debug("{} GOT PROBE FOR {}", getId(), event.task.getId());
-				probes.add(event.task.getId());
+				depositedProbes.add(event.task.getId());
 				trigger(new Probing.GotRequest(self, event.taskMaster,
 						event.task), networkPort);
 				trigger(new Resources.Reserve(event.task),
@@ -338,6 +369,9 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	};
 
+	/**
+	 * a task has been "accepted" and put in the queue by another node
+	 */
 	private final Handler<Probing.GotRequest> handleGotProbeRequest = new Handler<Probing.GotRequest>() {
 		@Override
 		public void handle(Probing.GotRequest resp) {
@@ -347,6 +381,11 @@ public final class ResourceManager extends ComponentDefinition {
 
 	};
 
+	/**
+	 * a task has been selected and resources has been allocated. The master
+	 * need to confirm the task, send another pending task with same of less
+	 * resource, or release the resources.
+	 */
 	private final Handler<Probing.Response> handleProbingResponse = new Handler<Probing.Response>() {
 		@Override
 		public void handle(Probing.Response resp) {
@@ -363,6 +402,9 @@ public final class ResourceManager extends ComponentDefinition {
 
 	};
 
+	/**
+	 * got allocation for executing a task immediately
+	 */
 	private final Handler<Probing.Allocate> handleProbingAllocate = new Handler<Probing.Allocate>() {
 		@Override
 		public void handle(Probing.Allocate event) {
@@ -373,6 +415,9 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	};
 
+	/**
+	 * handling cancel of a probe
+	 */
 	private final Handler<Probing.Cancel> handleProbingCancel = new Handler<Probing.Cancel>() {
 		@Override
 		public void handle(Probing.Cancel event) {

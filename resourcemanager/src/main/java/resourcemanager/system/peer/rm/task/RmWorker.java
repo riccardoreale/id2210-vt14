@@ -71,6 +71,10 @@ public class RmWorker extends ComponentDefinition {
 		}
 	};
 
+	/**
+	 * handling a probe reservation adding the task placeholder in the waiting
+	 * queue and polling the queue to see if we have resources for any task
+	 */
 	Handler<Resources.Reserve> handleReserve = new Handler<Resources.Reserve>() {
 		@Override
 		public void handle(Resources.Reserve event) {
@@ -80,6 +84,11 @@ public class RmWorker extends ComponentDefinition {
 		}
 	};
 
+	/**
+	 * handling an confirmation of a task execution. The task to execute can be
+	 * different from the placeholder task but it will use the same or less
+	 * resources
+	 */
 	Handler<Resources.Allocate> handleAllocate = new Handler<Resources.Allocate>() {
 		@Override
 		public void handle(Resources.Allocate event) {
@@ -99,10 +108,14 @@ public class RmWorker extends ComponentDefinition {
 				runTask(event.task);
 
 			} else
-				log.warn("AAAA");
+				log.error("{} GOT ALLOCATE FOR A NOT PENDING REQUEST", selfId);
 		}
 	};
 
+	/**
+	 * handling a cancel for a pending requests. Means that the master already
+	 * assigned the task and doesn't have any more task to give us
+	 */
 	Handler<Resources.Cancel> handleCancel = new Handler<Resources.Cancel>() {
 		@Override
 		public void handle(Resources.Cancel event) {
@@ -118,10 +131,14 @@ public class RmWorker extends ComponentDefinition {
 				pop();
 
 			} else
-				log.warn("CCCC");
+				log.error("{} GOT CANCEL FOR A NOT PENDING REQUEST", selfId);
 		}
 	};
 
+	/**
+	 * when a task is finished we deallocate, add it to the done queue and check
+	 * if we can run more
+	 */
 	Handler<TaskDone> handleTaskDone = new Handler<TaskDone>() {
 		@Override
 		public void handle(TaskDone event) {
@@ -146,6 +163,12 @@ public class RmWorker extends ComponentDefinition {
 		}
 	};
 
+	/**
+	 * check if the next task in the waiting list can be executed. If it can, it
+	 * will request a confirmation to the task master or it will allocate it
+	 * directly if we are in Omniscent Oracle Mode
+	 * 
+	 */
 	private void pop() {
 		TaskPlaceholder t = (TaskPlaceholder) res.workingQueue.waiting.peek();
 		if (t == null) {
@@ -164,9 +187,14 @@ public class RmWorker extends ComponentDefinition {
 		}
 	}
 
+	/**
+	 * when requesting a confirmation to the task master we anyhow allocate
+	 * temporary the resources
+	 * 
+	 * @param t
+	 *            task to be confirmed
+	 */
 	private void getConfirm(TaskPlaceholder t) {
-		// here we temporary block resources
-		// and ask for confirmation
 		res.allocate(t.getNumCpus(), t.getMemoryInMbs());
 		waitingConfirmation.put(t.id, t);
 
@@ -185,6 +213,15 @@ public class RmWorker extends ComponentDefinition {
 		runTask(placeholder);
 	}
 
+	/**
+	 * executing a task means allocate the resources for TimeToHoldResources.
+	 * 
+	 * This is the only time that TimeToHoldResources is used (since in theory
+	 * is not known a priori, but we need it to simulate the "execution" of the
+	 * task
+	 * 
+	 * @param t
+	 */
 	private void runTask(Task t) {
 		log.debug("{} RUNNING {} ({}/{})", new Object[] { getId(), t.getId(),
 				res.numFreeCpus, res.freeMemInMbs });
