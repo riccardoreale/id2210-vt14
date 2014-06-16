@@ -58,6 +58,7 @@ public class Detector extends ComponentDefinition {
 
 	private DetectorInit conf = null;
 	private Map<Address, Detector.Info> tracked = new HashMap<Address, Detector.Info>();
+	private String selfName;
 	
 	private UUID setTimer (Address target, long delay) {
 		ScheduleTimeout st = new ScheduleTimeout(delay);
@@ -75,6 +76,7 @@ public class Detector extends ComponentDefinition {
 		@Override
 		public void handle(DetectorInit event) {
 			conf = event;
+			selfName = conf.self.getIp().toString();
 		}
 	};
 	
@@ -87,16 +89,17 @@ public class Detector extends ComponentDefinition {
 		@Override
 		public void handle(FdetPort.Subscribe event) {
 			if (event.ref == conf.self) {	/* Corner case ... */
+				log.warn(selfName + ": Self-subscription?");
 				return;
 			}
 
 			Info stored = tracked.get(event.ref);
 			if (stored == null) {
+				log.info(selfName + ": Subscribing " + event.ref);
 				stored = new Info();
 				startRound(event.ref, stored);
 				tracked.put(event.ref, stored);
 			} else {
-				assert false : "Currently not enable. Do we need this?";
 				stored.refcount ++;
 			}
 		}
@@ -106,14 +109,15 @@ public class Detector extends ComponentDefinition {
 		@Override
 		public void handle(FdetPort.Unsubscribe event) {
 			if (event.ref == conf.self) { 	/* Corner case ... */
+				log.warn(selfName + ": Self-unsubscription?");
 				return;
 			}
 			Info stored = tracked.get(event.ref);
 			if (stored == null) return;
 			if (stored.refcount > 1) {
-				assert false : "Currently not enable. Do we need this?";
 				stored.refcount --;
 			} else {
+				log.info(selfName + ": Unsubscribing " + event.ref);
 				trigger(new CancelTimeout(stored.timeoutId), timerPort);
 				tracked.remove(event.ref);
 			}
