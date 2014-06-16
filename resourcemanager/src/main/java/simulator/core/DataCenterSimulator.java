@@ -34,6 +34,7 @@ import system.peer.RmPort;
 import common.configuration.Configuration;
 import common.configuration.CyclonConfiguration;
 import common.configuration.DataCenterConfiguration;
+import common.configuration.FdetConfiguration;
 import common.configuration.RmConfiguration;
 import common.configuration.TManConfiguration;
 import common.simulation.ClientRequestResource;
@@ -44,21 +45,12 @@ import common.simulation.PeerFail;
 import common.simulation.PeerJoin;
 import common.simulation.SimulatorInit;
 import common.simulation.SimulatorPort;
+import common.utils.Pair;
 
 public final class DataCenterSimulator extends ComponentDefinition {
 
 	private static final Logger log = LoggerFactory
 			.getLogger(DataCenterSimulator.class);
-
-	private class Pair<X, Y> {
-		public final X fst;
-		public final Y snd;
-
-		public Pair(X f, Y s) {
-			fst = f;
-			snd = s;
-		}
-	}
 
 	Positive<SimulatorPort> simulator = positive(SimulatorPort.class);
 	Positive<Network> network = positive(Network.class);
@@ -70,6 +62,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 	private CyclonConfiguration cyclonConfiguration;
 	private RmConfiguration rmConfiguration;
 	private TManConfiguration tmanConfiguration;
+	private FdetConfiguration fdetConfiguration;
 	private Long identifierSpaceSize;
 	private ConsistentHashtable<Long> ringNodes;
 	private AsIpGenerator ipGenerator = AsIpGenerator.getInstance(125);
@@ -100,6 +93,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 			tmanConfiguration = init.getTmanConfiguration();
 			dataCenterConfiguration = init.getDataCenterConfiguration();
 			identifierSpaceSize = cyclonConfiguration.getIdentifierSpaceSize();
+			fdetConfiguration = init.getFdetConfiguration();
 
 			Snapshot.init(rmConfiguration.getProbes(),
 					dataCenterConfiguration.load);
@@ -118,10 +112,10 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		public void handle(ClientRequestResource event) {
 			Component peer = null;
 			if (dataCenterConfiguration.omniscent) {
-				peer = omniscentSelector(event.getNumCpus(),
-						event.getMemoryInMbs());
+				peer = omniscentSelector(event.required.numCpus,
+						event.required.memoryInMbs);
 			} else {
-				Long successor = ringNodes.getNode(event.getId());
+				Long successor = ringNodes.getNode(event.taskId);
 				peer = peers.get(successor);
 			}
 			trigger(event, peer.getNegative(RmPort.class));
@@ -235,8 +229,8 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 		AvailableResourcesImpl ar = new AvailableResourcesImpl(numCpus, memInMb);
 		trigger(new PeerInit(address, bootstrapConfiguration,
-				cyclonConfiguration, rmConfiguration, ar, tmanConfiguration),
-				peer.getControl());
+				cyclonConfiguration, rmConfiguration, ar, tmanConfiguration,
+				fdetConfiguration),	peer.getControl());
 
 		trigger(new Start(), peer.getControl());
 		peers.put(id, peer);

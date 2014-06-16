@@ -15,9 +15,10 @@ public class MainGradient {
 		long seed = Long.parseLong(args[1]);
 		float load = Float.parseFloat(args[2]);
 		int probes = Integer.parseInt(args[3]);
+		final long fdetTimeout = 3000;
 
 		Configuration configuration = new Configuration(seed, omniscent,
-				probes, load);
+				probes, load, fdetTimeout);
 
 		Scenario2.generateScenario(load);
 

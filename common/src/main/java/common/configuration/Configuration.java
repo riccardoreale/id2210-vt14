@@ -34,8 +34,9 @@ public class Configuration {
 	TManConfiguration tmanConfiguration;
 	RmConfiguration searchConfiguration;
 	DataCenterConfiguration dataCenterConfiguration;
+	FdetConfiguration fdetConfiguration;
 
-	public Configuration(long seed, boolean omniscent, int probes, float load)
+	public Configuration(long seed, boolean omniscent, int probes, float load, long fdetTimeout)
 			throws IOException {
 		this.seed = seed;
 		dataCenterConfiguration = new DataCenterConfiguration(omniscent, load);
@@ -44,6 +45,7 @@ public class Configuration {
 		cyclonConfiguration = new CyclonConfiguration(seed, 5, 10,
 				GOSSIP_PERIOD, 500000,
 				(long) (Integer.MAX_VALUE - Integer.MIN_VALUE), 20);
+		fdetConfiguration = new FdetConfiguration(fdetTimeout);
 
 		String c = File.createTempFile("bootstrap.", ".conf").getAbsolutePath();
 		bootConfiguration.store(c);
@@ -64,5 +66,9 @@ public class Configuration {
 		c = File.createTempFile("datacenter.", ".conf").getAbsolutePath();
 		dataCenterConfiguration.store(c);
 		System.setProperty("datacenter.configuration", c);
+
+		c = File.createTempFile("fdet.", ".conf").getAbsolutePath();
+		fdetConfiguration.store(c);
+		System.setProperty("fdet.configuration", c);
 	}
 }

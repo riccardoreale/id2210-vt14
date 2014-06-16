@@ -1,36 +1,17 @@
 package resourcemanager.system.peer.rm.task;
 
-public class Task extends TaskResources {
+import common.simulation.TaskResources;
 
-	protected long enqueueTime;
-	protected long allocateTime;
-	protected long deallocateTime;
+public class Task extends TaskTimes {
 
-	public Task(long id, int numCpus, int memoryInMbs, int timeToHoldResource) {
-		super(id, numCpus, memoryInMbs, timeToHoldResource);
-		this.enqueueTime = -1;
-		this.allocateTime = -1;
-		this.deallocateTime = -1;
-	}
+	public final long id;
+	public final TaskResources required;
+	public final long timeToHoldResource;
 
-	public void queue() {
-		this.enqueueTime = System.currentTimeMillis();
-	}
-
-	public void allocate() {
-		this.allocateTime = System.currentTimeMillis();
-	}
-
-	public void deallocate() {
-		this.deallocateTime = System.currentTimeMillis();
-	}
-
-	public long getQueueTime() {
-		return allocateTime - enqueueTime;
-	}
-
-	public long getTotalTime() {
-		return deallocateTime - enqueueTime;
+	public Task(long id, TaskResources required, long timeToHoldResource) {
+		this.id = id;
+		this.required = required;
+		this.timeToHoldResource = timeToHoldResource;
 	}
 
 	@Override
@@ -48,6 +29,14 @@ public class Task extends TaskResources {
 			return false;
 		Task other = (Task) obj;
 		return id == other.id;
+	}
+
+	public Task copy() {
+		return new Task(this.id, this.required, this.timeToHoldResource);
+	}
+	
+	public long getId() {
+		return id;
 	}
 
 }

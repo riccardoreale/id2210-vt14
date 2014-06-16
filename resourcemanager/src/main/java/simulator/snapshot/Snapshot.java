@@ -24,7 +24,7 @@ public class Snapshot {
 	private static int probes;
 	private static float load;
 
-	public static boolean PRINT_TO_SCREEN = false;
+	public static boolean PRINT_TO_SCREEN = true;
 
 	public static void init(int numProbes, float loadF) {
 		probes = numProbes;
@@ -73,7 +73,7 @@ public class Snapshot {
 			AvailableResourcesImpl res = (AvailableResourcesImpl) p
 					.getAvailableResources();
 
-			List<Task> done = res.getWorkingQueue().getDone();
+			List<Task> done = res.getWorkingQueue().done;
 			totalDone += done.size();
 			for (Task task : done) {
 				totalTime += task.getTotalTime();

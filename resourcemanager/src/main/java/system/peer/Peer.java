@@ -35,6 +35,9 @@ import cyclon.system.peer.cyclon.CyclonJoin;
 import cyclon.system.peer.cyclon.CyclonPort;
 import cyclon.system.peer.cyclon.CyclonSamplePort;
 import cyclon.system.peer.cyclon.JoinCompleted;
+import fdet.system.Detector;
+import fdet.system.evts.DetectorInit;
+import fdet.system.evts.FdetPort;
 
 public final class Peer extends ComponentDefinition {
 
@@ -43,7 +46,7 @@ public final class Peer extends ComponentDefinition {
 	Positive<Network> network = positive(Network.class);
 	Positive<Timer> timer = positive(Timer.class);
 
-	private Component cyclon, tman, rm, bootstrap;
+	private Component cyclon, tman, rm, bootstrap, fdet;
 	private Address self;
 	private int bootstrapRequestPeerCount;
 	private boolean bootstrapped;
@@ -56,15 +59,19 @@ public final class Peer extends ComponentDefinition {
 		tman = create(TMan.class);
 		rm = create(ResourceManager.class);
 		bootstrap = create(BootstrapClient.class);
+		fdet = create(Detector.class);
 
 		connect(network, rm.getNegative(Network.class));
 		connect(network, cyclon.getNegative(Network.class));
 		connect(network, bootstrap.getNegative(Network.class));
 		connect(network, tman.getNegative(Network.class));
+		connect(network, fdet.getNegative(Network.class));
+
 		connect(timer, rm.getNegative(Timer.class));
 		connect(timer, cyclon.getNegative(Timer.class));
 		connect(timer, bootstrap.getNegative(Timer.class));
 		connect(timer, tman.getNegative(Timer.class));
+		connect(timer, fdet.getNegative(Timer.class));
 
 		connect(cyclon.getPositive(CyclonSamplePort.class),
 				rm.getNegative(CyclonSamplePort.class));
@@ -79,6 +86,8 @@ public final class Peer extends ComponentDefinition {
 		subscribe(handleJoinCompleted, cyclon.getPositive(CyclonPort.class));
 		subscribe(handleBootstrapResponse,
 				bootstrap.getPositive(P2pBootstrap.class));
+		
+		connect(fdet.getPositive(FdetPort.class), rm.getNegative(FdetPort.class));
 	}
 
 	Handler<PeerInit> handleInit = new Handler<PeerInit>() {
@@ -104,6 +113,9 @@ public final class Peer extends ComponentDefinition {
 			BootstrapRequest request = new BootstrapRequest("Cyclon",
 					bootstrapRequestPeerCount);
 			trigger(request, bootstrap.getPositive(P2pBootstrap.class));
+			trigger(new DetectorInit(self, init.getFdTimeout()),
+				fdet.getControl()
+			);
 		}
 	};
 

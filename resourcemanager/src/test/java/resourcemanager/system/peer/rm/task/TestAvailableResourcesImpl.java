@@ -4,6 +4,8 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
+import common.simulation.TaskResources;
+
 public class TestAvailableResourcesImpl {
 
 	@Test
@@ -22,12 +24,12 @@ public class TestAvailableResourcesImpl {
 	public void testFullQueueNoWaiting() {
 		final long now = System.currentTimeMillis();
 		AvailableResourcesImpl res = new AvailableResourcesImpl(8, 12000);
-		for (int i = 0; i < 4; i++) {
+		for (long i = 0; i < 4; i++) {
 
 			res.allocate(2, 2);
-			Task task = new Task(i, 2, 2, 60000);
+			Task task = new Task(i, new TaskResources(2, 2), 60000);
 			task.allocateTime = now - (4 - i) * 10000;
-			res.workingQueue.running.put((long) i, task);
+			res.workingQueue.running.put(i, new TaskPlaceholder.Direct(null, task));
 		}
 
 		int workingQueueTime = res.getWorkingQueueTime(2, 2);
@@ -39,18 +41,18 @@ public class TestAvailableResourcesImpl {
 	public void testFullQueueWithWaiting() {
 		final long now = System.currentTimeMillis();
 		AvailableResourcesImpl res = new AvailableResourcesImpl(8, 12000);
-		for (int i = 0; i < 4; i++) {
+		for (long i = 0; i < 4; i++) {
 
 			res.allocate(2, 2);
-			TaskPlaceholder task = new TaskPlaceholder(i, 2, 2, 60000, null);
+			Task task = new Task(i, new TaskResources(2, 2), 60000);
 			task.allocateTime = now;
-			res.workingQueue.running.put((long) i, task);
+			res.workingQueue.running.put(i, new TaskPlaceholder.Direct(null, task));
 		}
 
-		for (int i = 0; i < 4; i++) {
+		for (long i = 0; i < 4; i++) {
 
-			TaskPlaceholder task = new TaskPlaceholder(i, 4, 2, 60000, null);
-			res.workingQueue.waiting.add(task);
+			Task task = new Task(i, new TaskResources(4, 2), 60000);
+			res.workingQueue.waiting.add(new TaskPlaceholder.Direct(null, task));
 		}
 
 		int workingQueueTime = res.getWorkingQueueTime(2, 2);

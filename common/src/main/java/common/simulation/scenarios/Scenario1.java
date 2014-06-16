@@ -8,6 +8,7 @@ public class Scenario1 extends Scenario {
 	// public static float SYSTEM_LOAD = 0.8f;
 
 	private static final int NODES = 20;
+	private static final int NODES_FAULTY = 5;
 	private static final int NODE_MEMORY = 12000;
 	private static final int NODE_CPU = 8;
 
@@ -48,7 +49,7 @@ public class Scenario1 extends Scenario {
 				StochasticProcess failPeersProcess = new StochasticProcess() {
 					{
 						eventInterArrivalTime(constant(100));
-						raise(1, Operations.peerFail,
+						raise(NODES_FAULTY, Operations.peerFail,
 								uniform(0, Integer.MAX_VALUE));
 					}
 				};
@@ -67,6 +68,7 @@ public class Scenario1 extends Scenario {
 				};
 				process0.start();
 				process1.startAfterTerminationOf(5500, process0);
+//				failPeersProcess.startAfterStartOf(5500, process0);
 				evaluate.startAfterTerminationOf(duration, process1);
 				terminateProcess.startAfterTerminationOf(duration, process1);
 			}
