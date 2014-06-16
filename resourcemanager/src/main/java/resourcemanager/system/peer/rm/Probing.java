@@ -57,4 +57,11 @@ public class Probing {
 			super(self, target, referenceId);
 		}
 	}
+	
+	public static class Completed extends RefMessage {
+		private static final long serialVersionUID = -5644837612278254502L;
+		protected Completed(Address source, Address destination, long referenceId) {
+			super(source, destination, referenceId);
+		}
+	}
 }

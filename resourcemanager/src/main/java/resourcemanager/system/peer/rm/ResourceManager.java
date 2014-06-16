@@ -15,6 +15,7 @@ import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import resourcemanager.system.peer.rm.Probing.Completed;
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.RmWorker;
 import resourcemanager.system.peer.rm.task.Task;
@@ -98,6 +99,7 @@ public final class ResourceManager extends ComponentDefinition {
 		subscribe(handleProbingResponse, networkPort);
 		subscribe(handleProbingAllocate, networkPort);
 		subscribe(handleProbingCancel, networkPort);
+		subscribe(handleProbingTerminate, networkPort);
 		subscribe(handleTManSample, tmanPort);
 		subscribe(handleFailure, fdetPort);
 		subscribe(handleRestore, fdetPort);
@@ -312,6 +314,15 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Resources.Completed> handleCompleted = new Handler<Resources.Completed>() {
 		@Override
 		public void handle(Resources.Completed event) {
+			log.debug(getId() + " SIGNALING TERMINATION TO " + event.taskMaster);
+			trigger(new Probing.Completed(self, event.taskMaster, event.task.id), networkPort);
+		}
+	};
+
+	private final Handler<Probing.Completed> handleProbingTerminate = new Handler<Probing.Completed>() {
+		@Override
+		public void handle(Completed event) {
+			log.debug(getId() + " TASK TERMINATED BY " + event.getSource());
 		}
 	};
 
