@@ -95,7 +95,7 @@ public class Detector extends ComponentDefinition {
 
 			Info stored = tracked.get(event.ref);
 			if (stored == null) {
-				log.info(selfName + ": Subscribing " + event.ref);
+				log.debug(selfName + ": Subscribing " + event.ref.getIp());
 				stored = new Info();
 				startRound(event.ref, stored);
 				tracked.put(event.ref, stored);
@@ -117,7 +117,7 @@ public class Detector extends ComponentDefinition {
 			if (stored.refcount > 1) {
 				stored.refcount --;
 			} else {
-				log.info(selfName + ": Unsubscribing " + event.ref);
+				log.debug(selfName + ": Unsubscribing " + event.ref);
 				trigger(new CancelTimeout(stored.timeoutId), timerPort);
 				tracked.remove(event.ref);
 			}

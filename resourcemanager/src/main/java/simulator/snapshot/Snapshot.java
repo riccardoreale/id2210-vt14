@@ -96,7 +96,7 @@ public class Snapshot {
 		// + totalQueueTime + "\t" + ratio + "\t" + averageQueue;
 
 		String roundResults = load + "\t" + probes + "\t" + averageQueue + "\t"
-				+ percentile99;
+				+ percentile99 + "\t" + totalDone;
 
 		if (PRINT_TO_SCREEN)
 			System.err.println(roundResults);

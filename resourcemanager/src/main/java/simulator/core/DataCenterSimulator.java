@@ -243,7 +243,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 	private void stopAndDestroyPeer(Long id) {
 		Component peer = peers.get(id);
-
+		
 		trigger(new Stop(), peer.getControl());
 
 		disconnect(network, peer.getNegative(Network.class));
@@ -251,6 +251,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 		peers.remove(id);
 		Address addr = peersAddress.remove(id);
+		log.warn("FAILING PEER " + addr.getIp().getHostAddress());
 		Snapshot.removePeer(addr);
 
 		destroy(peer);

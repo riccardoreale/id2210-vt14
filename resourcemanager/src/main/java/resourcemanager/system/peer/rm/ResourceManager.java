@@ -20,6 +20,7 @@ import resourcemanager.system.peer.rm.Probing.Completed;
 import resourcemanager.system.peer.rm.task.AvailableResourcesImpl;
 import resourcemanager.system.peer.rm.task.RmWorker;
 import resourcemanager.system.peer.rm.task.Task;
+import resourcemanager.system.peer.rm.task.TaskDone;
 import resourcemanager.system.peer.rm.task.TaskPlaceholder;
 import resourcemanager.system.peer.rm.task.WorkerInit;
 import resourcemanager.system.peer.rm.task.WorkerPort;
@@ -30,6 +31,7 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.address.Address;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 import system.peer.RmPort;
 import tman.system.peer.tman.TManSample;
@@ -55,6 +57,8 @@ public final class ResourceManager extends ComponentDefinition {
 
 	private static final Logger log = LoggerFactory
 			.getLogger(ResourceManager.class);
+
+	private static final long PROBE_TIMEOUT = 2000;
 
 	/**
 	 * the temperature for the SoftMax process that selects the next hop to send
@@ -95,8 +99,8 @@ public final class ResourceManager extends ComponentDefinition {
 	private AvailableResourcesImpl res;
 
 	/* Components for probing */
-	private final Queue<Task> waiting = new LinkedList<Task>();
-	private final Map<Long, Address> assigned = new HashMap<Long, Address>();
+	private final List<Task> waiting = new LinkedList<Task>();
+	private final Map<Address, List<Outstanding>> assigned = new HashMap<Address, List<Outstanding>>();
 	private final Map<Long, Outstanding> outstanding = new HashMap<Long, ResourceManager.Outstanding>();
 
 	public ResourceManager() {
@@ -105,6 +109,7 @@ public final class ResourceManager extends ComponentDefinition {
 		subscribe(handleCyclonSample, cyclonSamplePort);
 		subscribe(handleRequestResource, indexPort);
 		subscribe(handleUpdateTimeout, timerPort);
+		subscribe(handleProbeTimeout, timerPort);
 		subscribe(handleProbingRequest, networkPort);
 		subscribe(handleProbingResponse, networkPort);
 		subscribe(handleProbingAllocate, networkPort);
@@ -157,10 +162,34 @@ public final class ResourceManager extends ComponentDefinition {
 					.getAddress();
 		}
 	};
-	
+
 	Handler<FdetPort.Dead> handleFailure = new Handler<FdetPort.Dead>() {
 		@Override
 		public void handle(FdetPort.Dead event) {
+			log.warn("{} DETECTED THAT {} IS DEAD!", getId(), event.ref);
+
+			List<Outstanding> list = assigned.get(event.ref);
+			if (list != null && list.size() > 0) {
+				for (Outstanding out : list) {
+					if (!out.isDone()) {
+						/*
+						 * the task is not done! for sure we need to re-add it
+						 * on top of the waiting list
+						 */
+						if (out.subscribers.size() == out.responses) {
+							// all the other probed guys already answered
+							log.warn(event.ref + " DIED WHILE RUNNING "
+									+ out.t.id);
+
+							outstanding.remove(out.t.id);
+							probe(out.t, configuration.getProbes());
+						}
+
+						waiting.add(0, out.t);
+					}
+				}
+			}
+
 		}
 	};
 
@@ -170,22 +199,22 @@ public final class ResourceManager extends ComponentDefinition {
 		}
 	};
 
-	public void probe(final Task t) {
-		assert !waiting.contains(t);
-		waiting.add(t);
-		outstanding.put(t.id, new Outstanding(t));
+	public void probe(final Task t, int maxProbes) {
 
 		// first it checks if it can execute a task itself
 		if (res.isAvailable(t.required.numCpus, t.required.memoryInMbs)) {
 
-			trigger(new Probing.Request(self, self, t.required, t.id, self, 10), networkPort);
-			
+			trigger(new Probing.Request(self, self, t.required, t.id, self, 10),
+					networkPort);
+
 			log.debug("{} SENDING PROBE FOR {} TO  MYSELF", getId(), t.id);
+
+			generateOutstandingTask(t, 1);
 
 		} else {
 			// otherwise it sends N new probes to selected peers
 
-			int put = configuration.getProbes();
+			int put = maxProbes;
 			List<PeerCap> chosen = new ArrayList<PeerCap>();
 			List<Address> chosenAddress = new ArrayList<Address>();
 
@@ -200,15 +229,48 @@ public final class ResourceManager extends ComponentDefinition {
 				chosen.add(cap);
 				chosenAddress.add(cap.getAddress());
 
-				trigger(new Probing.Request(self, cap.address, t.required, t.id, self, 0),
-						networkPort);
+				trigger(new Probing.Request(self, cap.address, t.required,
+						t.id, self, 0), networkPort);
 			}
+
+			generateOutstandingTask(t, chosen.size());
 
 			log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] { getId(),
 					t.id, chosen });
 		}
 
 	}
+
+	private void generateOutstandingTask(Task t, int probes) {
+
+		ScheduleTimeout tout = new ScheduleTimeout(PROBE_TIMEOUT);
+		tout.setTimeoutEvent(new ProbesTimeout(tout, t.id));
+		trigger(tout, timerPort);
+
+		if (!outstanding.containsKey(t.id))
+			outstanding.put(t.id, new Outstanding(t, probes));
+	}
+
+	Handler<ProbesTimeout> handleProbeTimeout = new Handler<ProbesTimeout>() {
+		@Override
+		public void handle(ProbesTimeout event) {
+
+			Outstanding outTask = outstanding.get(event.referenceId);
+			assert outTask != null : "GOT PROBE TIMEOUT FOR MISSING OUTSTANDING TASK "
+					+ event.referenceId;
+
+			int missingProbes = outTask.probes - outTask.subscribers.size();
+
+			if (missingProbes > 0) {
+				/*
+				 * in case we are missing one or more probes, we re-send them
+				 */
+				log.warn("MISSING #{} PROBES FOR {}", new Object[] {
+						missingProbes, event.referenceId });
+				probe(outTask.t, 1);
+			}
+		}
+	};
 
 	/**
 	 * filters out excluded peers from the neighbour view and uses SoftMax to
@@ -274,7 +336,7 @@ public final class ResourceManager extends ComponentDefinition {
 					&& reserved.required.memoryInMbs >= t.required.memoryInMbs) {
 				i.remove();
 				isUsed = true;
-				assigned.put(t.id, peer);
+				assignToOutstanding(peer, t.id);
 
 				log.debug(
 						"{} ASSIGNING {} TO {} {}",
@@ -297,17 +359,31 @@ public final class ResourceManager extends ComponentDefinition {
 					reserved.getId(), peer.getIp() });
 			trigger(new Probing.Cancel(self, peer, reserved.getId()),
 					networkPort);
+			
+			if(!peer.equals(self))
+				trigger(new FdetPort.Unsubscribe(peer), fdetPort);
+
 		}
 	}
 
-	private Task getOustanding(Address source, long id) {
+	private void assignToOutstanding(Address peer, long id) {
+		Outstanding outTask = outstanding.get(id);
+		assert outTask != null;
+
+		if (!assigned.containsKey(peer))
+			assigned.put(peer, new ArrayList<ResourceManager.Outstanding>());
+		assigned.get(peer).add(outTask);
+
+	}
+
+	private Outstanding getOutstanding(Address source, long id) {
 		Outstanding outRef = outstanding.get(id);
-		if(outRef == null)
+		if (outRef == null)
 			return null;
-		
+
 		assert outRef.subscribers.contains(source) : "PEER NOT SUBSCRIBED";
-			
-		return outRef.t;
+
+		return outRef;
 	}
 
 	/**
@@ -331,7 +407,7 @@ public final class ResourceManager extends ComponentDefinition {
 			boolean available = res.isAvailable(event.required.getNumCpus(),
 					event.required.getMemoryInMbs());
 			boolean alreadyGot = depositedProbes.contains(event.taskId);
-			
+
 			if (!available && event.count < MAX_HOPS || alreadyGot) {
 
 				ArrayList<Address> exclude = new ArrayList<Address>();
@@ -339,11 +415,11 @@ public final class ResourceManager extends ComponentDefinition {
 				PeerCap dest = selectNextHop(event.required, exclude);
 
 				if (dest != null) {
-					log.debug("{} PROPAGATING PROBE FOR {}", getId(),
+					log.trace("{} PROPAGATING PROBE FOR {}", getId(),
 							event.taskId);
-					trigger(new Probing.Request(self, dest.getAddress(), event.required,
-							event.taskId, event.taskMaster, event.count + 1),
-							networkPort);
+					trigger(new Probing.Request(self, dest.getAddress(),
+							event.required, event.taskId, event.taskMaster,
+							event.count + 1), networkPort);
 					depositProbe = false;
 				}
 			}
@@ -354,13 +430,18 @@ public final class ResourceManager extends ComponentDefinition {
 			 */
 			if (depositProbe) {
 				log.debug("{} GOT PROBE FOR {} AFTER {} HOPS ({})",
-						new Object[] { getId(), event.taskId,
-								event.count, available });
+						new Object[] { getId(), event.taskId, event.count,
+								available });
 				depositedProbes.add(event.taskId);
 				trigger(new Probing.GotRequest(self, event.taskMaster,
 						event.taskId), networkPort);
-				trigger(new Resources.Reserve(event.taskMaster, event.taskId, event.required),
-						worker.getNegative(WorkerPort.class));
+				trigger(new Resources.Reserve(event.taskMaster, event.taskId,
+						event.required), worker.getNegative(WorkerPort.class));
+
+				/*
+				 * here no need to subscribe the task master to failure
+				 * detector, the RM Worker should do it
+				 */
 			}
 		}
 	};
@@ -374,11 +455,17 @@ public final class ResourceManager extends ComponentDefinition {
 
 			Outstanding outRef = outstanding.get(resp.referenceId);
 			outRef.subscribers.add(resp.getSource());
-			
+
+			/*
+			 * here we subscribe the peer that received the probe to the failure
+			 * detector
+			 */
+			if (!resp.getSource().equals(self))
+				trigger(new FdetPort.Subscribe(resp.getSource()), fdetPort);
+
 		}
 
 	};
-	
 
 	/**
 	 * a task has been selected and resources has been allocated. The master
@@ -389,14 +476,17 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Probing.Response resp) {
 
-			Task t = getOustanding(resp.getSource(), resp.referenceId);
+			Outstanding outT = getOutstanding(resp.getSource(),
+					resp.referenceId);
+			outT.incrementResponses();
 
-			assert t != null : getId() + " NOT FOUND "
+			assert outT != null : getId() + " NOT FOUND "
 					+ resp.getSource().getIp() + " FOR " + resp.referenceId;
 
 			log.debug("{} GOT RESPONSE FROM {} FOR {}", new Object[] { getId(),
-					resp.getSource().getIp(), t.getId() });
-			serve(resp.getSource(), t);
+					resp.getSource().getIp(), outT.t.id });
+
+			serve(resp.getSource(), outT.t);
 		}
 
 	};
@@ -409,7 +499,8 @@ public final class ResourceManager extends ComponentDefinition {
 		public void handle(Probing.Allocate event) {
 
 			log.debug("{} GOT ALLOCATE FOR {}", getId(), event.task.id);
-			trigger(new Resources.Allocate(event.getSource(), event.referenceId, event.task),
+			trigger(new Resources.Allocate(event.getSource(),
+					event.referenceId, event.task),
 					worker.getNegative(WorkerPort.class));
 		}
 	};
@@ -425,24 +516,26 @@ public final class ResourceManager extends ComponentDefinition {
 
 			trigger(new Resources.Cancel(event.referenceId),
 					worker.getNegative(WorkerPort.class));
+
 		}
 	};
 
 	private final Handler<Resources.Confirm> handleConfirmRequest = new Handler<Resources.Confirm>() {
 		@Override
 		public void handle(Resources.Confirm event) {
-			log.debug("{} REQUESTING CONFIRMATION FOR {}", getId(), event
-					.tph.getId());
+			log.debug("{} REQUESTING CONFIRMATION FOR {}", getId(),
+					event.tph.getId());
 			trigger(new Probing.Response(self, event.tph.taskMaster,
 					event.tph.getId()), networkPort);
 		}
 	};
-	
+
 	private final Handler<Resources.Completed> handleCompleted = new Handler<Resources.Completed>() {
 		@Override
 		public void handle(Resources.Completed event) {
 			log.debug(getId() + " SIGNALING TERMINATION TO " + event.taskMaster);
-			trigger(new Probing.Completed(self, event.taskMaster, event.task.id), networkPort);
+			trigger(new Probing.Completed(self, event.taskMaster, event.task.id),
+					networkPort);
 		}
 	};
 
@@ -450,6 +543,10 @@ public final class ResourceManager extends ComponentDefinition {
 		@Override
 		public void handle(Completed event) {
 			log.debug(getId() + " TASK TERMINATED BY " + event.getSource());
+
+			if (!event.getSource().equals(self))
+				trigger(new FdetPort.Unsubscribe(event.getSource()), fdetPort);
+			outstanding.get(event.referenceId).done();
 		}
 	};
 
@@ -459,7 +556,8 @@ public final class ResourceManager extends ComponentDefinition {
 
 			log.info(
 					"{} got ClientRequestResource {} resources: {} + {} ({})",
-					new Object[] { getId(), event.taskId, event.required.getNumCpus(),
+					new Object[] { getId(), event.taskId,
+							event.required.getNumCpus(),
 							event.required.getMemoryInMbs(),
 							event.timeToHoldResource });
 
@@ -473,11 +571,14 @@ public final class ResourceManager extends ComponentDefinition {
 					event.timeToHoldResource);
 			t.queue();
 
+			assert !waiting.contains(t);
+			waiting.add(t);
+
 			if (configuration.isOmniscent()) {
 				trigger(new Resources.AllocateDirectly(self, t),
 						worker.getNegative(WorkerPort.class));
 			} else {
-				probe(t);
+				probe(t, configuration.getProbes());
 			}
 		}
 	};
@@ -536,13 +637,29 @@ public final class ResourceManager extends ComponentDefinition {
 			return stringBuilder.toString();
 		}
 	}
-	
+
 	public class Outstanding {
 		final Task t;
+		final int probes;
 		List<Address> subscribers = new ArrayList<Address>();
-		
-		public Outstanding(Task t) {
+		private boolean done;
+		private int responses;
+
+		public Outstanding(Task t, int probes) {
 			this.t = t;
+			this.probes = probes;
+		}
+
+		public void incrementResponses() {
+			responses++;
+		}
+
+		public void done() {
+			done = true;
+		}
+
+		public boolean isDone() {
+			return done;
 		}
 	}
 }
