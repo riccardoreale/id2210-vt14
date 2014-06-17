@@ -8,7 +8,7 @@ import se.sics.kompics.address.Address;
  */
 public class PeerCap implements Comparable<PeerCap> {
 
-	private final static boolean USE_QUEUE_LEN = false;
+	private final static boolean USE_QUEUE_LEN = true;
 	public final Address address;
 	public final int maxCpu;
 	public final int maxMemory;

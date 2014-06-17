@@ -6,7 +6,7 @@ import common.configuration.Configuration;
 import common.simulation.scenarios.Scenario;
 import common.simulation.scenarios.Scenario1;
 
-public class Main {
+public class MainLoad {
 
 	public static void main(String[] args) throws Throwable {
 		// TODO - change the random seed, have the user pass it in.

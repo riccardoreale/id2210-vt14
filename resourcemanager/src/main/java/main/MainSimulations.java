@@ -27,7 +27,7 @@ public class MainSimulations {
 		}
 		for (double load : loads) {
 			for (Long seed : seeds) {
-				Main.main(new String[] { String.valueOf(USE_ORACLE), "" + seed,
+				MainLoad.main(new String[] { String.valueOf(USE_ORACLE), "" + seed,
 						"" + load, String.valueOf(PROBES) });
 			}
 
