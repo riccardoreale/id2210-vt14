@@ -100,6 +100,8 @@ public final class ResourceManager extends ComponentDefinition {
 
 	/* Components for probing */
 	private final List<Task> waiting = new LinkedList<Task>();
+	
+	// TODO needs garbage collecting!
 	private final Map<Address, List<Outstanding>> assigned = new HashMap<Address, List<Outstanding>>();
 	private final Map<Long, Outstanding> outstanding = new HashMap<Long, ResourceManager.Outstanding>();
 
@@ -168,6 +170,16 @@ public final class ResourceManager extends ComponentDefinition {
 		public void handle(FdetPort.Dead event) {
 			log.warn("{} DETECTED THAT {} IS DEAD!", getId(), event.ref);
 
+			/*
+			 * TODO OPTIMIZATION! we should keep a list of dead nodes to filter
+			 * them away from cyclon or gradient lists of neighbours which could
+			 * be not very fresh and still return THE DEAD!
+			 */
+
+			/*
+			 * the important thing is to check if the dead node was still running
+			 * something for us. In that case we need to reschedule
+			 */
 			List<Outstanding> list = assigned.get(event.ref);
 			if (list != null && list.size() > 0) {
 				for (Outstanding out : list) {
@@ -359,8 +371,8 @@ public final class ResourceManager extends ComponentDefinition {
 					reserved.getId(), peer.getIp() });
 			trigger(new Probing.Cancel(self, peer, reserved.getId()),
 					networkPort);
-			
-			if(!peer.equals(self))
+
+			if (!peer.equals(self))
 				trigger(new FdetPort.Unsubscribe(peer), fdetPort);
 
 		}
