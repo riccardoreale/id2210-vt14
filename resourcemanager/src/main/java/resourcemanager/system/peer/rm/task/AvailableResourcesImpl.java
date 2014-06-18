@@ -20,6 +20,12 @@ public class AvailableResourcesImpl implements AvailableResources {
 
 	WorkingQueue workingQueue;
 
+	public String toString() {
+		return String.format("CPUs: %d/%d free, Memory: %d/%d free", numFreeCpus,
+			totalCpus, freeMemInMbs, totalMemory
+		);
+	}
+
 	public AvailableResourcesImpl(int numFreeCpus, int freeMemInMbs) {
 		this.numFreeCpus = numFreeCpus;
 		this.freeMemInMbs = freeMemInMbs;
@@ -36,6 +42,9 @@ public class AvailableResourcesImpl implements AvailableResources {
 	}
 
 	public synchronized boolean allocate(int numCpus, int memInMbs) {
+		if (numCpus <= 0 || memInMbs <= 0) {
+			throw new IllegalArgumentException("Invalid numbCpus or mem");
+		}
 		if (numFreeCpus >= numCpus && freeMemInMbs >= memInMbs) {
 			numFreeCpus -= numCpus;
 			freeMemInMbs -= memInMbs;
