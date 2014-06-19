@@ -124,6 +124,7 @@ public final class ResourceManager extends ComponentDefinition {
 
 		worker = create(RmWorker.class);
 		connect(timerPort, worker.getNegative(Timer.class));
+		connect(fdetPort, worker.getNegative(FdetPort.class));
 		subscribe(handleConfirmRequest, worker.getNegative(WorkerPort.class));
 		subscribe(handleCompleted, worker.getNegative(WorkerPort.class));
 	}

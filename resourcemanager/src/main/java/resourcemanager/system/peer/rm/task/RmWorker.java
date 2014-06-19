@@ -6,6 +6,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import fdet.system.evts.FdetPort;
+
 import resourcemanager.system.peer.rm.Resources;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -41,6 +43,7 @@ public class RmWorker extends ComponentDefinition {
 
 	private Positive<Timer> timerPort = positive(Timer.class);
 	private Positive<WorkerPort> workerPort = positive(WorkerPort.class);
+	private Positive<FdetPort> fdetPort = positive(FdetPort.class);
 
 	private AvailableResourcesImpl res = null;
 	private Address self;
@@ -55,6 +58,8 @@ public class RmWorker extends ComponentDefinition {
 		subscribe(handleAllocate, workerPort);
 		subscribe(handleCancel, workerPort);
 		subscribe(handleTaskDone, timerPort);
+		subscribe(handleNodeFailure, fdetPort);
+		subscribe(handleNodeRestore, fdetPort);
 	}
 
 	private ObjectId getId() {
@@ -90,6 +95,20 @@ public class RmWorker extends ComponentDefinition {
 			TaskPlaceholder.Direct tph = new TaskPlaceholder.Direct(event.taskMaster, event.task);
 			res.workingQueue.waiting.add(tph);
 			pop();
+		}
+	};
+
+	Handler<FdetPort.Dead> handleNodeFailure = new Handler<FdetPort.Dead>() {
+		@Override
+		public void handle(FdetPort.Dead event) {
+			// TODO Auto-generated method stub
+		}
+	};
+
+	Handler<FdetPort.Undead> handleNodeRestore = new Handler<FdetPort.Undead>() {
+		@Override
+		public void handle(FdetPort.Undead event) {
+			// TODO Auto-generated method stub
 		}
 	};
 
