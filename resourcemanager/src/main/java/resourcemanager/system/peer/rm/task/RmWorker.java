@@ -1,14 +1,20 @@
 package resourcemanager.system.peer.rm.task;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import common.simulation.TaskResources;
+
 import fdet.system.evts.FdetPort;
 
 import resourcemanager.system.peer.rm.Resources;
+import resourcemanager.system.peer.rm.task.TaskPlaceholder.Deferred;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
@@ -39,6 +45,36 @@ public class RmWorker extends ComponentDefinition {
 
 	}
 
+	private class Borrowers {
+		Map<Address, Integer> map = new HashMap<Address, Integer>();
+
+		public void lend(Address to, TaskResources what) {
+			Integer n = map.get(to);
+			map.put(to, n == null ? 1 : n + 1);
+			res.allocate(what);
+			trigger(new FdetPort.Subscribe(to), fdetPort);
+		}
+
+		public void claim(Address to, TaskResources what) {
+			Integer n = map.get(to);
+			assert n != null;
+			if (n == 1) {
+				map.remove(to);
+				trigger(new FdetPort.Unsubscribe(to), fdetPort);
+			} else {
+				assert n > 1;
+				map.put(to, n - 1);
+			}
+			res.release(what);
+		}
+
+		private void updateCredit(Address to, TaskResources prev, TaskResources next) {
+			assert map.containsKey(to);
+			res.release(prev);
+			res.allocate(next);
+		}
+	};
+
 	private static final Logger log = LoggerFactory.getLogger(RmWorker.class);
 
 	private Positive<Timer> timerPort = positive(Timer.class);
@@ -48,6 +84,7 @@ public class RmWorker extends ComponentDefinition {
 	private AvailableResourcesImpl res = null;
 	private Address self;
 	private ObjectId selfId = new ObjectId();
+	private Borrowers borrowers = new Borrowers();
 
 	private Map<Long, TaskPlaceholder.Deferred> waitingConfirmation = new HashMap<Long, TaskPlaceholder.Deferred>();
 
@@ -101,7 +138,31 @@ public class RmWorker extends ComponentDefinition {
 	Handler<FdetPort.Dead> handleNodeFailure = new Handler<FdetPort.Dead>() {
 		@Override
 		public void handle(FdetPort.Dead event) {
-			// TODO Auto-generated method stub
+			ArrayList<Long> removed = new ArrayList<Long>();
+			int staying = 0;
+
+			Iterator<Entry<Long, TaskPlaceholder.Direct>> i = res.workingQueue.running.entrySet().iterator();
+			while (i.hasNext()) {
+				Entry<Long, TaskPlaceholder.Direct> e = i.next();
+				TaskPlaceholder.Direct tph = e.getValue();
+				if (tph.taskMaster.equals(event.ref)){
+					staying ++;
+				}
+			}
+
+			Iterator<Entry<Long, Deferred>> j = waitingConfirmation.entrySet().iterator();
+			while (j.hasNext()) {
+				Entry<Long, TaskPlaceholder.Deferred> e = j.next();
+				TaskPlaceholder.Deferred tph = e.getValue();
+				if (tph.taskMaster.equals(event.ref)){
+					borrowers.claim(event.ref, tph.required);
+					removed.add(e.getKey());
+					j.remove();
+				}
+			}
+
+			log.debug(getId() + ": {} DETECTED AS DEAD. RELEASED RESOURCES FOR {}", event.ref, removed);
+			assert borrowers.map.get(event.ref) == (staying == 0 ? null : staying) : borrowers.map.get(event.ref);
 		}
 	};
 
@@ -123,8 +184,7 @@ public class RmWorker extends ComponentDefinition {
 			TaskPlaceholder.Deferred placeholder = waitingConfirmation.remove(event.originalTaskId);
 			assert placeholder != null;
 			log.info("Allocating waiting task");
-			res.release(placeholder.getNumCpus(), placeholder.getMemoryInMbs());
-			res.allocate(event.task.required.numCpus, event.task.required.memoryInMbs);
+			borrowers.updateCredit(placeholder.taskMaster, placeholder.required, event.task.required);
 			TaskPlaceholder.Direct run = new TaskPlaceholder.Direct(event.taskMaster, event.task);
 			res.workingQueue.running.put(event.task.id, run);
 			runTask(event.task);
@@ -140,7 +200,7 @@ public class RmWorker extends ComponentDefinition {
 		public void handle(Resources.Cancel event) {
 			TaskPlaceholder.Deferred placeholder = waitingConfirmation.remove(event.taskId);
 			if (placeholder != null) {
-				res.release(placeholder.required.numCpus, placeholder.required.memoryInMbs);
+				borrowers.claim(placeholder.taskMaster, placeholder.required);
 				// res.workingQueue.running.remove(remove.getId());
 				log.debug("{} REMOVED {}", getId(), event.taskId);
 				pop();
@@ -163,7 +223,7 @@ public class RmWorker extends ComponentDefinition {
 			assert tph != null;
 			Task t = tph.task;
 			t.deallocate();
-			res.release(t.required.numCpus, t.required.memoryInMbs);
+			borrowers.claim(tph.taskMaster, t.required);
 			res.workingQueue.done.add(t);
 			log.info(
 					"{} Done {}, QueueTime={}, TotalTime={}",
@@ -216,7 +276,7 @@ public class RmWorker extends ComponentDefinition {
 	private void getConfirm(TaskPlaceholder.Deferred t) {
 		// here we temporary block resources
 		// and ask for confirmation
-		res.allocate(t.getNumCpus(), t.getMemoryInMbs());
+		borrowers.lend(t.taskMaster, t.required);
 		waitingConfirmation.put(t.getId(), t);
 
 		trigger(new Resources.Confirm(t), workerPort);
@@ -224,7 +284,7 @@ public class RmWorker extends ComponentDefinition {
 
 	private void allocateDirectly(TaskPlaceholder.Direct placeholder) {
 		// here we allocate resources and start the timers
-		res.allocate(placeholder.getNumCpus(), placeholder.getMemoryInMbs());
+		borrowers.lend(placeholder.taskMaster, placeholder.task.required);
 
 		res.workingQueue.running.put(placeholder.getId(), placeholder);
 
