@@ -50,6 +50,7 @@ public class TaskPlaceholder {
 
 	public static class Direct extends Base {
 		public final Task task;
+
 		public Direct(Address taskMaster, Task task) {
 			super(taskMaster);
 			this.task = task;

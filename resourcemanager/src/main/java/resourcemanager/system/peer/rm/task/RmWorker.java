@@ -26,27 +26,32 @@ public class RmWorker extends ComponentDefinition {
 
 	public class ObjectId {
 
-		public String toString() {
-			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.append("[");
-			stringBuilder.append(res.getNumFreeCpus());
-			stringBuilder.append("/");
-			stringBuilder.append(res.getWorkingQueue().running.size());
-			stringBuilder.append("/");
-			stringBuilder.append(res.getWorkingQueue().waiting.size());
-			stringBuilder.append("/");
-			stringBuilder.append(waitingConfirmation.size());
-			stringBuilder.append(" ");
-			stringBuilder.append(self.getIp());
-			stringBuilder.append("]");
+		private String cached = null;
 
-			return stringBuilder.toString();
+		public String toString() {
+			if (cached == null) {
+				StringBuilder stringBuilder = new StringBuilder();
+				stringBuilder.append("[");
+				stringBuilder.append(res.getNumFreeCpus());
+				stringBuilder.append("/");
+				stringBuilder.append(res.getWorkingQueue().running.size());
+				stringBuilder.append("/");
+				stringBuilder.append(res.getWorkingQueue().waiting.size());
+				stringBuilder.append("/");
+				stringBuilder.append(waitingConfirmation.size());
+				stringBuilder.append(" ");
+				stringBuilder.append(self.getIp());
+				stringBuilder.append("]");
+
+				cached = stringBuilder.toString();
+			}
+			return cached;
 		}
 
 	}
 
 	private class Borrowers {
-		Map<Address, Integer> map = new HashMap<Address, Integer>();
+		private Map<Address, Integer> map = new HashMap<Address, Integer>();
 
 		public void lend(Address to, TaskResources what) {
 			Integer n = map.get(to);
@@ -66,6 +71,11 @@ public class RmWorker extends ComponentDefinition {
 				map.put(to, n - 1);
 			}
 			res.release(what);
+		}
+		
+		public int countCredits(Address of) {
+			Integer out = map.get(of);
+			return out == null ? 0 : out;
 		}
 
 		private void updateCredit(Address to, TaskResources prev, TaskResources next) {
@@ -139,19 +149,19 @@ public class RmWorker extends ComponentDefinition {
 		@Override
 		public void handle(FdetPort.Dead event) {
 			ArrayList<Long> removed = new ArrayList<Long>();
+			boolean popAfter = false;
 			
-			/* <PARANOID MODE>
-			int staying = 0;
-
 			Iterator<Entry<Long, TaskPlaceholder.Direct>> i = res.workingQueue.running.entrySet().iterator();
 			while (i.hasNext()) {
 				Entry<Long, TaskPlaceholder.Direct> e = i.next();
 				TaskPlaceholder.Direct tph = e.getValue();
 				if (tph.taskMaster.equals(event.ref)){
-					staying ++;
+					borrowers.claim(event.ref, tph.task.required);
+					removed.add(e.getKey());
+					i.remove();
+					popAfter = true;
 				}
 			}
-			</PARANOID MODE> */
 
 			Iterator<Entry<Long, Deferred>> j = waitingConfirmation.entrySet().iterator();
 			while (j.hasNext()) {
@@ -164,10 +174,12 @@ public class RmWorker extends ComponentDefinition {
 				}
 			}
 
+			assert borrowers.countCredits(event.ref) == 0;
 			log.debug(getId() + ": {} DETECTED AS DEAD. RELEASED RESOURCES FOR {}", event.ref, removed);
-			/* <PARANOID MODE>
-			assert borrowers.map.get(event.ref) == (staying == 0 ? null : staying) : borrowers.map.get(event.ref);
-			</PARANOID MODE> */
+
+			/* If we eliminated at least one running task, the pop() call will be skipped.
+			 * We need therefore to do it here. */
+			if (popAfter) pop();
 		}
 	};
 
@@ -223,25 +235,26 @@ public class RmWorker extends ComponentDefinition {
 		@Override
 		public void handle(TaskDone event) {
 			TaskPlaceholder.Direct tph = res.workingQueue.running.remove(event.referenceId);
-			if (tph == null)
-				log.error(getId() + " " + event.referenceId);
-			assert tph != null;
-			Task t = tph.task;
-			t.deallocate();
-			borrowers.claim(tph.taskMaster, t.required);
-			res.workingQueue.done.add(t);
-			log.info(
-					"{} Done {}, QueueTime={}, TotalTime={}",
-					new Object[] {
-							getId(),
-							t.id,
-							t.getQueueTime(),
-							(float) (t.timeToHoldResource)
-									/ t.getTotalTime() });
-			trigger(new Resources.Completed(tph.taskMaster, t), workerPort);
+			if (tph == null) {
+				log.error(getId() + " IGNORING TASK " + event.referenceId + ", TASK MASTER WAS FAULTY");
+			} else {
+				Task t = tph.task;
+				t.deallocate();
+				borrowers.claim(tph.taskMaster, t.required);
+				res.workingQueue.done.add(t);
+				log.info(
+						"{} Done {}, QueueTime={}, TotalTime={}",
+						new Object[] {
+								getId(),
+								t.id,
+								t.getQueueTime(),
+								(float) (t.timeToHoldResource)
+										/ t.getTotalTime() });
+				trigger(new Resources.Completed(tph.taskMaster, t), workerPort);
 
-			/* last */
-			pop();
+				/* last */
+				pop();
+			}
 		}
 	};
 
