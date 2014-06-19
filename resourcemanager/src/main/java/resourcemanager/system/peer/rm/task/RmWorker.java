@@ -26,21 +26,26 @@ public class RmWorker extends ComponentDefinition {
 
 	public class ObjectId {
 
-		public String toString() {
-			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.append("[");
-			stringBuilder.append(res.getNumFreeCpus());
-			stringBuilder.append("/");
-			stringBuilder.append(res.getWorkingQueue().running.size());
-			stringBuilder.append("/");
-			stringBuilder.append(res.getWorkingQueue().waiting.size());
-			stringBuilder.append("/");
-			stringBuilder.append(waitingConfirmation.size());
-			stringBuilder.append(" ");
-			stringBuilder.append(self.getIp());
-			stringBuilder.append("]");
+		private String cached = null;
 
-			return stringBuilder.toString();
+		public String toString() {
+			if (cached == null) {
+				StringBuilder stringBuilder = new StringBuilder();
+				stringBuilder.append("[");
+				stringBuilder.append(res.getNumFreeCpus());
+				stringBuilder.append("/");
+				stringBuilder.append(res.getWorkingQueue().running.size());
+				stringBuilder.append("/");
+				stringBuilder.append(res.getWorkingQueue().waiting.size());
+				stringBuilder.append("/");
+				stringBuilder.append(waitingConfirmation.size());
+				stringBuilder.append(" ");
+				stringBuilder.append(self.getIp());
+				stringBuilder.append("]");
+
+				cached = stringBuilder.toString();
+			}
+			return cached;
 		}
 
 	}

@@ -639,15 +639,20 @@ public final class ResourceManager extends ComponentDefinition {
 
 	public class ObjectId {
 
+		private String cached = null;
+
 		@Override
 		public String toString() {
-			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.append("[");
-			stringBuilder.append(res.getNumFreeCpus() - res.getQueueLength());
-			stringBuilder.append(" ");
-			stringBuilder.append(self.getIp());
-			stringBuilder.append("]");
-			return stringBuilder.toString();
+			if (cached == null) {
+				StringBuilder stringBuilder = new StringBuilder();
+				stringBuilder.append("[");
+				stringBuilder.append(res.getNumFreeCpus() - res.getQueueLength());
+				stringBuilder.append(" ");
+				stringBuilder.append(self.getIp());
+				stringBuilder.append("]");
+				cached = stringBuilder.toString();
+			}
+			return cached;
 		}
 	}
 
