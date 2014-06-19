@@ -6,6 +6,7 @@
 package resourcemanager.system.peer.rm.task;
 
 import common.peer.AvailableResources;
+import common.simulation.TaskResources;
 
 /**
  * 
@@ -36,10 +37,16 @@ public class AvailableResourcesImpl implements AvailableResources {
 	}
 
 	public synchronized boolean allocate(int numCpus, int memInMbs) {
+		if (numCpus <= 0 || memInMbs <= 0) {
+			throw new IllegalArgumentException("Invalid numbCpus or mem");
+		}
 		if (numFreeCpus >= numCpus && freeMemInMbs >= memInMbs) {
 			numFreeCpus -= numCpus;
 			freeMemInMbs -= memInMbs;
 			return true;
+		}
+		if (numFreeCpus < 0 || freeMemInMbs < 0) {
+			throw new IllegalArgumentException("Allocating too much");
 		}
 		return false;
 	}
@@ -50,6 +57,9 @@ public class AvailableResourcesImpl implements AvailableResources {
 		}
 		numFreeCpus += numCpus;
 		freeMemInMbs += memInMbs;
+		if (numFreeCpus > totalCpus || freeMemInMbs > totalMemory) {
+			throw new IllegalArgumentException("Releasing too much");
+		}
 	}
 
 	public int getNumFreeCpus() {
@@ -85,5 +95,13 @@ public class AvailableResourcesImpl implements AvailableResources {
 	@Override
 	public int getQueueLength() {
 		return workingQueue.getWaiting().size();
+	}
+
+	public void allocate(TaskResources r) {
+		allocate(r.numCpus, r.memoryInMbs);
+	}
+
+	public void release(TaskResources r) {
+		release(r.numCpus, r.memoryInMbs);
 	}
 }
