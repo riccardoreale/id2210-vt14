@@ -222,6 +222,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 		Component peer = create(Peer.class);
 		InetAddress ip = ipGenerator.generateIP();
 		Address address = new Address(ip, 8058, (int) id);
+		
 
 		connect(network, peer.getNegative(Network.class),
 				new MessageDestinationFilter(address));

@@ -40,7 +40,7 @@ public class RmWorker extends ComponentDefinition {
 				stringBuilder.append("/");
 				stringBuilder.append(waitingConfirmation.size());
 				stringBuilder.append(" ");
-				stringBuilder.append(self.getIp());
+				stringBuilder.append(self.getIp().getHostAddress());
 				stringBuilder.append("]");
 
 				cached = stringBuilder.toString();
@@ -175,7 +175,7 @@ public class RmWorker extends ComponentDefinition {
 			}
 
 			assert borrowers.countCredits(event.ref) == 0;
-			log.debug(getId() + ": {} DETECTED AS DEAD. RELEASED RESOURCES FOR {}", event.ref, removed);
+			log.debug(getId() + ": {} DETECTED AS DEAD. RELEASED RESOURCES FOR {}", event.ref.getIp().getHostAddress(), removed);
 
 			/* If we eliminated at least one running task, the pop() call will be skipped.
 			 * We need therefore to do it here. */

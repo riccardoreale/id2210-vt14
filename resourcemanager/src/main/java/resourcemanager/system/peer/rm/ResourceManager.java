@@ -169,7 +169,7 @@ public final class ResourceManager extends ComponentDefinition {
 	Handler<FdetPort.Dead> handleFailure = new Handler<FdetPort.Dead>() {
 		@Override
 		public void handle(FdetPort.Dead event) {
-			log.warn("{} DETECTED THAT {} IS DEAD!", getId(), event.ref);
+			log.warn("{} DETECTED THAT {} IS DEAD!", getId(), event.ref.getIp().getHostAddress());
 
 			/*
 			 * TODO OPTIMIZATION! we should keep a list of dead nodes to filter
@@ -191,7 +191,7 @@ public final class ResourceManager extends ComponentDefinition {
 						 */
 						if (out.subscribers.size() == out.responses) {
 							// all the other probed guys already answered
-							log.warn(event.ref + " DIED WHILE RUNNING "
+							log.warn(event.ref.getIp().getHostAddress() + " DIED WHILE RUNNING "
 									+ out.t.id);
 
 							outstanding.remove(out.t.id);
@@ -248,8 +248,8 @@ public final class ResourceManager extends ComponentDefinition {
 
 			generateOutstandingTask(t, chosen.size());
 
-			log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] { getId(),
-					t.id, chosen });
+//			log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] { getId(),
+//					t.id, chosen });
 		}
 
 	}
@@ -356,7 +356,7 @@ public final class ResourceManager extends ComponentDefinition {
 						new Object[] {
 								getId(),
 								t.getId(),
-								peer.getIp(),
+								peer.getIp().getHostAddress(),
 								(t.id != reserved.getId() ? " (OLD:"
 										+ reserved.getId() + ")" : "") });
 				trigger(new Probing.Allocate(self, peer, reserved.getId(), t),
@@ -369,7 +369,7 @@ public final class ResourceManager extends ComponentDefinition {
 		 */
 		if (!isUsed) {
 			log.debug("{} SENDING CANCEL FOR {} TO {}", new Object[] { getId(),
-					reserved.getId(), peer.getIp() });
+					reserved.getId(), peer.getIp().getHostAddress() });
 			trigger(new Probing.Cancel(self, peer, reserved.getId()),
 					networkPort);
 
@@ -497,7 +497,7 @@ public final class ResourceManager extends ComponentDefinition {
 					+ resp.getSource().getIp() + " FOR " + resp.referenceId;
 
 			log.debug("{} GOT RESPONSE FROM {} FOR {}", new Object[] { getId(),
-					resp.getSource().getIp(), outT.t.id });
+					resp.getSource().getIp().getHostAddress(), outT.t.id });
 
 			serve(resp.getSource(), outT.t);
 		}
@@ -546,7 +546,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Resources.Completed> handleCompleted = new Handler<Resources.Completed>() {
 		@Override
 		public void handle(Resources.Completed event) {
-			log.debug(getId() + " SIGNALING TERMINATION TO " + event.taskMaster);
+			log.debug(getId() + " SIGNALING TERMINATION TO " + event.taskMaster.getIp().getHostAddress());
 			trigger(new Probing.Completed(self, event.taskMaster, event.task.id),
 					networkPort);
 		}
