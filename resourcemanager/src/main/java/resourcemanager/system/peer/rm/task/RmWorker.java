@@ -139,6 +139,8 @@ public class RmWorker extends ComponentDefinition {
 		@Override
 		public void handle(FdetPort.Dead event) {
 			ArrayList<Long> removed = new ArrayList<Long>();
+			
+			/* <PARANOID MODE>
 			int staying = 0;
 
 			Iterator<Entry<Long, TaskPlaceholder.Direct>> i = res.workingQueue.running.entrySet().iterator();
@@ -149,6 +151,7 @@ public class RmWorker extends ComponentDefinition {
 					staying ++;
 				}
 			}
+			</PARANOID MODE> */
 
 			Iterator<Entry<Long, Deferred>> j = waitingConfirmation.entrySet().iterator();
 			while (j.hasNext()) {
@@ -162,7 +165,9 @@ public class RmWorker extends ComponentDefinition {
 			}
 
 			log.debug(getId() + ": {} DETECTED AS DEAD. RELEASED RESOURCES FOR {}", event.ref, removed);
+			/* <PARANOID MODE>
 			assert borrowers.map.get(event.ref) == (staying == 0 ? null : staying) : borrowers.map.get(event.ref);
+			</PARANOID MODE> */
 		}
 	};
 
