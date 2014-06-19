@@ -248,8 +248,8 @@ public final class ResourceManager extends ComponentDefinition {
 
 			generateOutstandingTask(t, chosen.size());
 
-//			log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] { getId(),
-//					t.id, chosen });
+			log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] { getId(),
+					t.id, chosen });
 		}
 
 	}

@@ -87,7 +87,7 @@ public class PeerCap implements Comparable<PeerCap> {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("[").append(address.getIp()).append(" - ");
+		sb.append("[").append(address.getIp().getHostAddress()).append(" - ");
 		sb.append(getUtilityFunction()).append("]");
 
 		return sb.toString();
