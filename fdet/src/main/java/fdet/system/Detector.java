@@ -117,7 +117,7 @@ public class Detector extends ComponentDefinition {
 			if (stored.refcount > 1) {
 				stored.refcount --;
 			} else {
-				log.debug(selfName + ": Unsubscribing " + event.ref);
+				log.debug(selfName + ": Unsubscribing " + event.ref.getIp());
 				trigger(new CancelTimeout(stored.timeoutId), timerPort);
 				tracked.remove(event.ref);
 			}

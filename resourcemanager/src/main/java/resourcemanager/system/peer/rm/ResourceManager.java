@@ -555,7 +555,7 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Probing.Completed> handleProbingTerminate = new Handler<Probing.Completed>() {
 		@Override
 		public void handle(Completed event) {
-			log.debug(getId() + " TASK TERMINATED BY " + event.getSource());
+			log.debug(getId() + " TASK TERMINATED BY " + event.getSource().getIp());
 
 			if (!event.getSource().equals(self))
 				trigger(new FdetPort.Unsubscribe(event.getSource()), fdetPort);

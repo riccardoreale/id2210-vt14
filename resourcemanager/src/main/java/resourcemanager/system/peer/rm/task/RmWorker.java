@@ -57,7 +57,8 @@ public class RmWorker extends ComponentDefinition {
 			Integer n = map.get(to);
 			map.put(to, n == null ? 1 : n + 1);
 			res.allocate(what);
-			trigger(new FdetPort.Subscribe(to), fdetPort);
+			if(!to.equals(self))
+				trigger(new FdetPort.Subscribe(to), fdetPort);
 		}
 
 		public void claim(Address to, TaskResources what) {
@@ -65,7 +66,8 @@ public class RmWorker extends ComponentDefinition {
 			assert n != null;
 			if (n == 1) {
 				map.remove(to);
-				trigger(new FdetPort.Unsubscribe(to), fdetPort);
+				if(!to.equals(self))
+					trigger(new FdetPort.Unsubscribe(to), fdetPort);
 			} else {
 				assert n > 1;
 				map.put(to, n - 1);
@@ -200,7 +202,7 @@ public class RmWorker extends ComponentDefinition {
 		public void handle(Resources.Allocate event) {
 			TaskPlaceholder.Deferred placeholder = waitingConfirmation.remove(event.originalTaskId);
 			assert placeholder != null;
-			log.info("Allocating waiting task");
+			log.info("{} Allocating task {}", getId(), event.task.id);
 			borrowers.updateCredit(placeholder.taskMaster, placeholder.required, event.task.required);
 			TaskPlaceholder.Direct run = new TaskPlaceholder.Direct(event.taskMaster, event.task);
 			res.workingQueue.running.put(event.task.id, run);
