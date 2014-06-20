@@ -100,7 +100,7 @@ public final class ResourceManager extends ComponentDefinition {
 
 	/* Components for probing */
 	private final List<Task> waiting = new LinkedList<Task>();
-	
+
 	// TODO needs garbage collecting!
 	private final Map<Address, List<Outstanding>> assigned = new HashMap<Address, List<Outstanding>>();
 	private final Map<Long, Outstanding> outstanding = new HashMap<Long, ResourceManager.Outstanding>();
@@ -169,7 +169,8 @@ public final class ResourceManager extends ComponentDefinition {
 	Handler<FdetPort.Dead> handleFailure = new Handler<FdetPort.Dead>() {
 		@Override
 		public void handle(FdetPort.Dead event) {
-			log.warn("{} DETECTED THAT {} IS DEAD!", getId(), event.ref.getIp().getHostAddress());
+			log.warn("{} DETECTED THAT {} IS DEAD!", getId(), event.ref.getIp()
+					.getHostAddress());
 
 			/*
 			 * TODO OPTIMIZATION! we should keep a list of dead nodes to filter
@@ -178,8 +179,8 @@ public final class ResourceManager extends ComponentDefinition {
 			 */
 
 			/*
-			 * the important thing is to check if the dead node was still running
-			 * something for us. In that case we need to reschedule
+			 * the important thing is to check if the dead node was still
+			 * running something for us. In that case we need to reschedule
 			 */
 			List<Outstanding> list = assigned.get(event.ref);
 			if (list != null && list.size() > 0) {
@@ -191,8 +192,8 @@ public final class ResourceManager extends ComponentDefinition {
 						 */
 						if (out.subscribers.size() == out.responses) {
 							// all the other probed guys already answered
-							log.warn(event.ref.getIp().getHostAddress() + " DIED WHILE RUNNING "
-									+ out.t.id);
+							log.warn(event.ref.getIp().getHostAddress()
+									+ " DIED WHILE RUNNING " + out.t.id);
 
 							outstanding.remove(out.t.id);
 							probe(out.t, configuration.getProbes());
@@ -546,7 +547,9 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Resources.Completed> handleCompleted = new Handler<Resources.Completed>() {
 		@Override
 		public void handle(Resources.Completed event) {
-			log.debug(getId() + " SIGNALING TERMINATION TO " + event.taskMaster.getIp().getHostAddress());
+			log.debug("{} SIGNALING TERMINATION OF {} TO {}", new Object[] {
+					getId(), event.task.id,
+					event.taskMaster.getIp().getHostAddress() });
 			trigger(new Probing.Completed(self, event.taskMaster, event.task.id),
 					networkPort);
 		}
@@ -555,11 +558,13 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Probing.Completed> handleProbingTerminate = new Handler<Probing.Completed>() {
 		@Override
 		public void handle(Completed event) {
-			log.debug(getId() + " TASK TERMINATED BY " + event.getSource().getIp());
+			log.debug("{} TASK {} EXECUTED BY {}", new Object[]{getId(), event.referenceId, event.getSource().getIp()});
 
 			if (!event.getSource().equals(self))
 				trigger(new FdetPort.Unsubscribe(event.getSource()), fdetPort);
-			outstanding.get(event.referenceId).done();
+			
+			if(!configuration.isOmniscent())
+				outstanding.get(event.referenceId).done();
 		}
 	};
 
@@ -646,7 +651,8 @@ public final class ResourceManager extends ComponentDefinition {
 			if (cached == null) {
 				StringBuilder stringBuilder = new StringBuilder();
 				stringBuilder.append("[");
-				stringBuilder.append(res.getNumFreeCpus() - res.getQueueLength());
+				stringBuilder.append(res.getNumFreeCpus()
+						- res.getQueueLength());
 				stringBuilder.append(" ");
 				stringBuilder.append(self.getIp());
 				stringBuilder.append("]");
