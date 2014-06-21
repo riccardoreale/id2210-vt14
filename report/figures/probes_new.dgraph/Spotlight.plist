@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Labels</key>
+	<string>load (%)
+avg queue (ms)
+99th queue (ms)
+omniscent
+omniscent
+avg1 vs load
+1 probe
+avg2 vs load
+2 probes
+avg3 vs load
+3 probes
+</string>
+	<key>Text</key>
+	<string></string>
+</dict>
+</plist>

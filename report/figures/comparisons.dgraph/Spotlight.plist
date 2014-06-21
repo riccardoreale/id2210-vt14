@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Labels</key>
+	<string>load (%)
+average queue time (ms)
+99th perc queue time (ms)
+1 probe
+1 probe
+2 probes
+2 probes
+1 probe - random walk
+1 probe - random walk
+2 probes - random walk
+2 probes - random walk
+a1_grad vs l1
+max1_grad vs l1
+2 probes - gradient
+2 probes - gradient
+</string>
+	<key>Text</key>
+	<string></string>
+</dict>
+</plist>
