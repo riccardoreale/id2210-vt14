@@ -1,0 +1,63 @@
+\documentclass[conference]{IEEEtran}
+
+\title{
+  Course ID2210\\
+  Project Report
+}
+
+\author{
+  \IEEEauthorblockN{Riccardo Reale}
+  \IEEEauthorblockA{Peerialism AB\\
+    {riccardo.reale@peerialism.com}\\
+    \url{https://github.com/riccardoreale/id2210-vt14.git}
+  }
+  \and
+  \IEEEauthorblockN{Giovanni Simoni}
+  \IEEEauthorblockA{Peerialism AB\\
+    {giovanni.simoni@peerialism.com}\\
+    \url{https://github.com/dacav/id2210-vt14.git}
+  }
+}
+
+\input{settings/packages}
+\input{settings/defs}
+
+\begin{document}
+\maketitle
+
+\section{Architecture design}
+
+  We implemented two different behavioral modes. The first implements a
+  modified version of the scheduling logic illustrated by the paper,
+  henceforth referred as \us, while the second implements
+  an omniscent scheduler for sake of comparison with an optimal assignment
+  strategy, henceforth referred as \omni.
+
+  The required number of CPUs and amount of memory for the execution of a
+  task will be referred as \treq. \Treq are allocated by the node executing the
+  task (\exc) on behalf of the assigner (\tmast). The allocation time is
+  considered as the payload of a task assignment, while the execution
+  consists in allocating the resources (according to \treq), waiting the
+  specified amount of time, and releasing the resources.
+
+  Here follows the work-flow for a task assignment in \us:
+  \begin{enumerate}
+
+  \item The task gets issued by the \dc and propagated
+        to a \tmast, which is selected as the closest to the task
+        identifier within a consistent hash table;
+
+  \item If the \treq can be satisfied by the \tmast, the execution is
+        achieved immediately (namely the \tmast becomes the \exc),
+        otherwise probing messages are sent to a number $P$ of selected
+        nodes.
+
+  \end{enumerate}
+
+  \subsection{Selection of nodes to be probed}
+
+\section{Quick class reference}
+
+\section{Experimental evaluation}
+
+\end{document}
