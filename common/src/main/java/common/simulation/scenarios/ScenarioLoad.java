@@ -3,10 +3,10 @@ package common.simulation.scenarios;
 import se.sics.kompics.p2p.experiment.dsl.SimulationScenario;
 
 @SuppressWarnings("serial")
-public class Scenario1 extends Scenario {
+public class ScenarioLoad extends Scenario {
 
-	private static final int NODES = 20;
-	private static final int NODES_FAULTY = 1;
+	private static final int NODES = 50;
+	private static final int NODES_FAULTY = 5;
 	private static final int NODE_MEMORY = 12000;
 	private static final int NODE_CPU = 8;
 
@@ -66,7 +66,7 @@ public class Scenario1 extends Scenario {
 				};
 				process0.start();
 				process1.startAfterTerminationOf(5500, process0);
-				failPeersProcess.startAfterStartOf(100000, process0);
+//				failPeersProcess.startAfterStartOf(100000, process0);
 				evaluate.startAfterTerminationOf(duration, process1);
 				terminateProcess.startAfterTerminationOf(duration, process1);
 			}
@@ -74,7 +74,7 @@ public class Scenario1 extends Scenario {
 	}
 
 	// -------------------------------------------------------------------
-	public Scenario1() {
+	public ScenarioLoad() {
 		super(scenario);
 	}
 }

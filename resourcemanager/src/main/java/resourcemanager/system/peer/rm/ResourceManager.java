@@ -74,13 +74,20 @@ public final class ResourceManager extends ComponentDefinition {
 	 * if <b>false</b> will use the Cyclon random view to select peer for probes <br>
 	 * if <b>true</b> will use the Gradient view
 	 */
-	public static boolean USE_GRADIENT = false;
+	public static boolean USE_GRADIENT = true;
 
 	/**
 	 * maximum number of HOPS a probe can be propagated
 	 */
 	public static int MAX_HOPS = 5;
-
+	
+	
+	/**
+	 * allow a node to self assign a task if possible without probing
+	 */
+	public static boolean ALLOW_SELF_ASSIGN = true;
+	
+	
 	private final Positive<RmPort> indexPort = positive(RmPort.class);
 	private final Positive<Network> networkPort = positive(Network.class);
 	private final Positive<Timer> timerPort = positive(Timer.class);
@@ -215,15 +222,11 @@ public final class ResourceManager extends ComponentDefinition {
 
 	public void probe(final Task t, int maxProbes) {
 
+		boolean sendToMyself = false;
 		// first it checks if it can execute a task itself
-		if (res.isAvailable(t.required.numCpus, t.required.memoryInMbs)) {
+		if (ALLOW_SELF_ASSIGN && res.isAvailable(t.required.numCpus, t.required.memoryInMbs)) {
 
-			trigger(new Probing.Request(self, self, t.required, t.id, self, 10),
-					networkPort);
-
-			log.debug("{} SENDING PROBE FOR {} TO  MYSELF", getId(), t.id);
-
-			generateOutstandingTask(t, 1);
+			sendToMyself = true;
 
 		} else {
 			// otherwise it sends N new probes to selected peers
@@ -247,10 +250,25 @@ public final class ResourceManager extends ComponentDefinition {
 						t.id, self, 0), networkPort);
 			}
 
-			generateOutstandingTask(t, chosen.size());
+			if (chosen.size() > 0) {
 
-			log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] { getId(),
-					t.id, chosen });
+				generateOutstandingTask(t, chosen.size());
+
+				log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] {
+						getId(), t.id, chosen });
+			} else {
+				log.info("{} NO NEIGHBOURS TO PROBE...", getId());
+				sendToMyself = true;
+			}
+		}
+
+		if (sendToMyself) {
+			log.debug("{} SENDING PROBE FOR {} TO  MYSELF", getId(), t.id);
+
+			generateOutstandingTask(t, 1);
+
+			trigger(new Probing.Request(self, self, t.required, t.id, self, 10),
+					networkPort);
 		}
 
 	}
@@ -302,6 +320,9 @@ public final class ResourceManager extends ComponentDefinition {
 			@Override
 			public boolean eval(PeerCap param) {
 				if (exclude.contains(param.getAddress()))
+					return false;
+				
+				if (t.numCpus > param.maxCpu && t.memoryInMbs > param.maxMemory)
 					return false;
 
 				return true;
@@ -558,12 +579,13 @@ public final class ResourceManager extends ComponentDefinition {
 	private final Handler<Probing.Completed> handleProbingTerminate = new Handler<Probing.Completed>() {
 		@Override
 		public void handle(Completed event) {
-			log.debug("{} TASK {} EXECUTED BY {}", new Object[]{getId(), event.referenceId, event.getSource().getIp()});
+			log.debug("{} TASK {} EXECUTED BY {}", new Object[] { getId(),
+					event.referenceId, event.getSource().getIp() });
 
 			if (!event.getSource().equals(self))
 				trigger(new FdetPort.Unsubscribe(event.getSource()), fdetPort);
-			
-			if(!configuration.isOmniscent())
+
+			if (!configuration.isOmniscent())
 				outstanding.get(event.referenceId).done();
 		}
 	};

@@ -8,7 +8,7 @@ import se.sics.kompics.address.Address;
  */
 public class PeerCap implements Comparable<PeerCap> {
 
-	private final static boolean USE_QUEUE_LEN = true;
+	private final static boolean USE_QUEUE_LEN = false;
 	public final Address address;
 	public final int maxCpu;
 	public final int maxMemory;
@@ -99,7 +99,7 @@ public class PeerCap implements Comparable<PeerCap> {
 	 * comprehensive of the memory because anyhow random walks seems to perform
 	 * better.
 	 * 
-	 * Adding the waiting queue lenght in the utility function doesn't improve
+	 * Adding the waiting queue lenght in the utility function only slightly improve
 	 * results since the queued tasks are just placeholder and may be cancelled.
 	 * 
 	 * @return

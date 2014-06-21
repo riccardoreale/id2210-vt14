@@ -252,7 +252,7 @@ public final class DataCenterSimulator extends ComponentDefinition {
 
 		peers.remove(id);
 		Address addr = peersAddress.remove(id);
-		log.warn("FAILING PEER " + addr.getIp().getHostAddress());
+		log.info("FAILING PEER " + addr.getIp().getHostAddress());
 		Snapshot.removePeer(addr);
 
 		destroy(peer);

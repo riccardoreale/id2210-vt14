@@ -24,7 +24,7 @@ public class Snapshot {
 	private static int probes;
 	private static float load;
 
-	public static boolean PRINT_TO_SCREEN = true;
+	public static boolean PRINT_TO_SCREEN = false;
 
 	public static void init(int numProbes, float loadF) {
 		probes = numProbes;

@@ -6,14 +6,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
-public class MainSimulations {
+public class MainLoadSim {
 
 	private final static boolean USE_ORACLE = false;
 	private final static int PROBES = 2;
 
 	private final static int numSeeds = 5;
 	private final static double[] loads = new double[] { //
-	0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1
+//	0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 
+		0.85, 0.9, 0.95, 1
 	// 0.8, 0.85, 0.9, 0.95, 1
 	};
 

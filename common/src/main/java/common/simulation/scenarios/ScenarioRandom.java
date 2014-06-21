@@ -7,40 +7,55 @@ public class ScenarioRandom extends Scenario {
 
 	// public static float SYSTEM_LOAD = 0.8f;
 
-	private static final int NODES = 20;
 	private static final int NODES_FAULTY = 5;
-	private static final int NODE_MEMORY = 12000;
-	private static final int NODE_CPU = 8;
+	private static final int NODE_MEMORY = 16000;
 
-	private static final int JOBS = 1000;
-	private static final int JOB_MEMORY = 2000;
-	private static final int JOB_CPU = 2;
-	private static final int JOB_TIME = 10000;
+	private static final boolean USE_RANDOM_CPU = true;
+	private static final int FIXED_NODE_CPU = 8;
+	private static final int MIN_NODE_CPU = 4;
+	private static final int MAX_NODE_CPU = 16;
+
+	private static final int JOBS = 500;
+	
+	private static final boolean USE_RANDOM_MEMORY = true;
+	
+	private static final int FIXED_JOB_MEMORY = 1000;
+	private static final int MIN_JOB_MEMORY = 1000;
+	private static final int MAX_JOB_MEMORY = 16000;
+	private static final int MIN_JOB_CPU = 1;
+	private static final int MAX_JOB_CPU = 8;
+	private static final int MIN_JOB_TIME = 1000;
+	private static final int MAX_JOB_TIME = 30000;
 
 	private static final int duration = 300 * 1000;
 
 	private static SimulationScenario scenario;
 
-	public static void generateScenario(final float load) {
+	public static void generateScenario(final int numNodes) {
 		scenario = new SimulationScenario() {
 			{
-//				final int interArrival = (int) (1000 / (((NODES * NODE_CPU) / JOB_CPU) / (JOB_TIME / 1000)) / load);
+
 				StochasticProcess process0 = new StochasticProcess() {
 					{
 						eventInterArrivalTime(constant(10));
-						raise(NODES, Operations.peerJoin(),
+						raise(numNodes,
+								Operations.peerJoin(),
 								uniform(0, Integer.MAX_VALUE),
-								constant(NODE_CPU), constant(NODE_MEMORY));
+								USE_RANDOM_CPU ? uniform(MIN_NODE_CPU,
+										MAX_NODE_CPU)
+										: constant(FIXED_NODE_CPU),
+								constant(NODE_MEMORY));
 					}
 				};
 
 				StochasticProcess process1 = new StochasticProcess() {
 					{
-						eventInterArrivalTime(exponential(100));
+						eventInterArrivalTime(exponential(500));
 						raise(JOBS, Operations.requestResources(),
 								uniform(0, Integer.MAX_VALUE),
-								uniform(1, 8), uniform(1000, 12000),
-								exponential(5000) // 1 minute
+								uniform(MIN_JOB_CPU, MAX_JOB_CPU),
+								USE_RANDOM_MEMORY ? uniform(MIN_JOB_MEMORY, MAX_JOB_MEMORY) : constant(FIXED_JOB_MEMORY),
+								uniform(MIN_JOB_TIME, MAX_JOB_TIME) // 1 minute
 						);
 					}
 				};
@@ -68,7 +83,7 @@ public class ScenarioRandom extends Scenario {
 				};
 				process0.start();
 				process1.startAfterTerminationOf(5500, process0);
-//				failPeersProcess.startAfterStartOf(5500, process0);
+				// failPeersProcess.startAfterStartOf(5500, process0);
 				evaluate.startAfterTerminationOf(duration, process1);
 				terminateProcess.startAfterTerminationOf(duration, process1);
 			}
