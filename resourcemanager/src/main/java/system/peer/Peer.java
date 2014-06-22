@@ -130,6 +130,7 @@ public final class Peer extends ComponentDefinition {
 					cyclonInsiders.add(peerEntry.getOverlayAddress()
 							.getPeerAddress());
 				}
+				
 				trigger(new CyclonJoin(self, cyclonInsiders),
 						cyclon.getPositive(CyclonPort.class));
 				bootstrapped = true;

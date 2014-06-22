@@ -12,7 +12,7 @@ public class ScenarioRandom extends Scenario {
 	private static final boolean USE_RANDOM_CPU = true;
 	private static final int FIXED_NODE_CPU = 8;
 	private static final int MIN_NODE_CPU = 4;
-	private static final int MAX_NODE_CPU = 16;
+	private static final int MAX_NODE_CPU = 12;
 	private static final int NODE_MEMORY = 16; // GB
 
 	private static final int JOBS = 500;
@@ -39,7 +39,7 @@ public class ScenarioRandom extends Scenario {
 
 				StochasticProcess process0 = new StochasticProcess() {
 					{
-						eventInterArrivalTime(constant(10));
+						eventInterArrivalTime(constant(100));
 						raise(numNodes,
 								Operations.peerJoin(),
 								uniform(0, Integer.MAX_VALUE),

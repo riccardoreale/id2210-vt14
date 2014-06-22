@@ -41,6 +41,13 @@ public class AvailableResourcesImpl implements AvailableResources {
 		}
 		return false;
 	}
+	
+	public synchronized boolean canBeAvailable(int numCpus, int memInMbs) {
+		if (totalCpus >= numCpus && totalMemory >= memInMbs) {
+			return true;
+		}
+		return false;
+	}
 
 	public synchronized boolean allocate(int numCpus, int memInMbs) {
 		if (numCpus <= 0 || memInMbs <= 0) {

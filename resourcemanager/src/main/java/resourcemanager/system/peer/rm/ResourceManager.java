@@ -74,7 +74,7 @@ public final class ResourceManager extends ComponentDefinition {
 	 * if <b>false</b> will use the Cyclon random view to select peer for probes <br>
 	 * if <b>true</b> will use the Gradient view
 	 */
-	public static boolean USE_GRADIENT = false;
+	public static boolean USE_GRADIENT = true;
 
 	/**
 	 * maximum number of HOPS a probe can be propagated
@@ -257,7 +257,7 @@ public final class ResourceManager extends ComponentDefinition {
 				log.debug("{} SENDING PROBE FOR {} TO {}", new Object[] {
 						getId(), t.id, chosen });
 			} else {
-				log.info("{} NO NEIGHBOURS TO PROBE...", getId());
+				log.warn("{} NO NEIGHBOURS TO PROBE...", getId());
 				sendToMyself = true;
 			}
 		}
@@ -439,11 +439,14 @@ public final class ResourceManager extends ComponentDefinition {
 
 			boolean depositProbe = true;
 
+			boolean enoughResources = res.canBeAvailable(event.required.getNumCpus(),
+					event.required.getMemoryInMbs());
+			
 			boolean available = res.isAvailable(event.required.getNumCpus(),
 					event.required.getMemoryInMbs());
 			boolean alreadyGot = depositedProbes.contains(event.taskId);
 
-			if (!available && event.count < MAX_HOPS || alreadyGot) {
+			if (alreadyGot || !enoughResources || (!available && event.count < MAX_HOPS)) {
 
 				ArrayList<Address> exclude = new ArrayList<Address>();
 				exclude.add(event.getSource());
