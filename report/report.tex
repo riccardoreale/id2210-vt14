@@ -44,16 +44,14 @@
    The required number of CPUs and amount of memory for the execution of a
   task will be referred as \treq. \Treq are allocated by the node executing the
   task (\exc) on behalf of the assigner (\tmast). The allocation time is
-  considered as the payload of a task assignment and we assume is not known a priori by a ResourceManager. Therefore the allocation time is used only to simulate the task execution, which consists in allocating the resources (according to \treq), waiting the
-  specified amount of time, and releasing the resources.
+  considered as the payload of a task assignment and we assume is not known a priori by a ResourceManager. Therefore the allocation time is used only to simulate the task execution, which consists in allocating the resources (according to \treq), waiting the specified amount of time, and releasing the resources.
 
   We implemented two different behavioral modes. The first implements
-  the best scheduling logic illustrated by the Sparrow paper (Batch + Late Binding),
-  henceforth referred as \us, while the second implements
+  the best scheduling logic illustrated by the Sparrow paper (Batch + Late Binding), henceforth referred as \us, while the second implements
   an omniscient scheduler for sake of comparison with an optimal assignment
   strategy, henceforth referred as \omni. This is obtained directly in the DataCenter scheduler, which, for each task, will calculate the first node to have the requested resources available, and assign it to be executed directly on that node as soon as possible. This operation is, of course, unrealistic since it make use of both updated information about the task queue on each node, and the allocation time of each task.
   
-  The workflow for \us algorithm is the follow:
+  The workflow for \us algorithm is the following:
   \begin{enumerate}
   
   \item The task gets issued by the \dc and propagated
@@ -98,6 +96,8 @@ Where $CPU_p(n)$ means the available CPU of the node \textit{n} according to the
   
   \end{enumerate}
 
+Finally Cyclon gossip period has been configured down to 250ms for  providing fresh samples for Greedy Search and Gradient.
+
 \section{Experimental evaluation}
 
 \subsection{Setup}
@@ -108,7 +108,7 @@ To evaluate our improvement over Sparrow we selected two main scenarios:
 
 \item A random scenario (\textbf{A}) which consists in using  a variable number of homogeneous nodes (8 cpus and 16GB memory), executing 500 tasks with different requirements in terms of only cpu (between 1 and 8) and time (between 1 and 30 seconds), which arrive at a rate of half second between each.
 
-\item A random scenario (\textbf{B}) similar to A but tasks have random values of both cpu and memory (between 1 and 8 GB). For this particular scenario we changed the utility function to include also the memory.
+\item A random scenario (\textbf{B}) similar to A but tasks have random values of both cpu and memory (between 1 and 8 GB). For this particular scenario we changed the utility function to combine also the available memory.
 
 \item A random scenario (\textbf{C}) similar to A but with heterogeneous nodes resources.
 
@@ -116,15 +116,14 @@ To evaluate our improvement over Sparrow we selected two main scenarios:
 
 Except for scenario \textit{B}, all of them are generated using the CPU as dominant resource, for easily controlling the load and the greedy ranking functions, both for Greedy Search and Gradient.
 
-We added and evaluated the different algorithm improvements adding them to Sparrow base one to obtain three different configurations: 
+We added and evaluated the different algorithm improvements adding them to the Sparrow base one to obtain three different configurations: 
 \begin{enumerate}
 \item \textbf{Random Walk} uses Self Assignment and Probe Propagation, with random Next Hop Selection (Temperature set to 100), giving us Random Walks for each probe. 
 \item \textbf{Greedy Search} adds Greedy Next Hop Selection.
 \item \textbf{Gradient Search} uses Greedy Next Hop Selection on top of Gradient View.
 \end{enumerate}
 
-As main measures we use, as suggested, the average queue time of each task and the 99th percentile.
-Each result is average over 5 runs with different seed.
+As main measures we use, as suggested, the average queue time of each task and the 99th percentile. Each result is average over 5 to 10 runs with different seeds.
 
 \subsection{Results in Load Scenario}
 
@@ -134,7 +133,7 @@ Figure \ref{fig:comparison} instead shows the results comparison between the Bas
 
 \begin{figure}
 \begin{center}
-\includegraphics[scale=0.5]{figures/probes_new}
+\includegraphics[scale=0.45]{figures/probes_new}
 \caption{Base Sparrow algorithm using different load and number of probes}
 \label{fig:probes}
 \end{center}
@@ -142,7 +141,7 @@ Figure \ref{fig:comparison} instead shows the results comparison between the Bas
 
 \begin{figure}
 \begin{center}
-\includegraphics[scale=0.5]{figures/comparison_new}
+\includegraphics[scale=0.45]{figures/comparison_new}
 \caption{Comparison between Base Sparrow Algorithm and its enhancements}
 \label{fig:comparison}
 \end{center}
@@ -184,7 +183,15 @@ The Gradient Ranking function is not too useful when the load increases too much
 \end{center}
 \end{figure}
 
-The Random Scenarios show a similar trend with the load scenario, except for the scenario C, with heterogeneous nodes, where Greedy Search helps to decrease the queue time in the worst cases.
-This is therefore the only case, in our implementation, where a Greedy Search or Gradient gives slightly better result. In case of node heterogeneity, the random walks are sufficient to balance the load among all nodes
+The Random Scenarios show similar trends with the load scenario, with Greedy Search slightly decreasing the Random Walk performances. 
+Only in the heterogeneous nodes scenario C the Gradient Search helps decrease the 99th percentile when there are enough resources available (more than 25 nodes).
 
-\end{document}
+Therefore, in all scenarios analysed for our implementation, Random Walks, and Greedy Searches gives better result than the base Sparrow algorithm.
+
+The difference between using Random Walks and Greedy Searches are mainly two:
+\begin{itemize}
+\item the cost of increasing the rate of Cyclon to always provide fresh samples of the utility function
+\item the development of a more complex utility function that may take into account multiple resources (more than cpu and memory) and possibly also a better way to estimate queue times (despite Late Binding).
+\end{itemize}
+
+.\end{document}

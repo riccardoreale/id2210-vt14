@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.11 (TeX Live 2010) (format=pdflatex 2011.7.4)  22 JUN 2014 02:53
+This is pdfTeX, Version 3.1415926-1.40.11 (TeX Live 2010) (format=pdflatex 2011.7.4)  22 JUN 2014 21:13
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -517,7 +517,7 @@ File: umsb.fd 2009/06/22 v3.00 AMS symbols B
 File: figures/probes_new.pdf Graphic file (type pdf)
 
 <use figures/probes_new.pdf>
-Overfull \hbox (48.07439pt too wide) in paragraph at lines 137--138
+Overfull \hbox (17.96013pt too wide) in paragraph at lines 136--137
  [] 
  []
 
@@ -525,7 +525,7 @@ Overfull \hbox (48.07439pt too wide) in paragraph at lines 137--138
 File: figures/comparison_new.pdf Graphic file (type pdf)
 
 <use figures/comparison_new.pdf>
-Overfull \hbox (48.07439pt too wide) in paragraph at lines 145--146
+Overfull \hbox (17.96013pt too wide) in paragraph at lines 144--145
  [] 
  []
 
@@ -533,21 +533,21 @@ Overfull \hbox (48.07439pt too wide) in paragraph at lines 145--146
 <figures/randomA.pdf, id=101, 602.25pt x 401.5pt>
 File: figures/randomA.pdf Graphic file (type pdf)
  <use figures/randomA.pdf>
-Overfull \hbox (17.96013pt too wide) in paragraph at lines 165--166
+Overfull \hbox (17.96013pt too wide) in paragraph at lines 164--165
  [] 
  []
 
 <figures/randomB.pdf, id=102, 602.25pt x 401.5pt>
 File: figures/randomB.pdf Graphic file (type pdf)
  <use figures/randomB.pdf>
-Overfull \hbox (17.96013pt too wide) in paragraph at lines 173--174
+Overfull \hbox (17.96013pt too wide) in paragraph at lines 172--173
  [] 
  []
 
 <figures/randomC.pdf, id=103, 602.25pt x 401.5pt>
 File: figures/randomC.pdf Graphic file (type pdf)
  <use figures/randomC.pdf>
-Overfull \hbox (17.96013pt too wide) in paragraph at lines 181--182
+Overfull \hbox (17.96013pt too wide) in paragraph at lines 180--181
  [] 
  []
 
@@ -562,12 +562,12 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 190.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 197.
 [3 <./figures/randomA.pdf> <./figures/randomB.pdf> <./figures/randomC.pdf>]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 190.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 197.
 
 (./report.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 190.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 197.
 Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 72D48B7BD531FB7E558E3FBD33457967;441.
 
@@ -591,7 +591,7 @@ e/2010/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive
 /2010/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2010/texm
 f-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2010/texmf-dist/fon
 ts/type1/urw/times/utmri8a.pfb>
-Output written on report.pdf (3 pages, 187354 bytes).
+Output written on report.pdf (3 pages, 193576 bytes).
 PDF statistics:
  201 PDF objects out of 1000 (max. 8388607)
  161 compressed objects within 2 object streams
