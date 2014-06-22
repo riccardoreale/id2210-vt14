@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Random;
 
 import common.peer.PeerCap;
+import common.simulation.TaskResources;
 
 public class SoftMax {
 
@@ -12,20 +13,30 @@ public class SoftMax {
 	private List<PeerCap> pList;
 	private int elements;
 	private double[] probabilities;
+	private boolean cpuIsDominant = true;
 
 	public SoftMax(List<PeerCap> p, double temperature, Random r) {
+		this(p, temperature, r, null);
+	}
+	
+	public SoftMax(List<PeerCap> p, double temperature, Random r, TaskResources t) {
 		this.random = r;
 		this.elements = p.size();
 		this.pList = p;
 		values = new double[elements];
-
+		
+		if(t != null)
+		{
+			cpuIsDominant = t.numCpus > t.memoryInMbs / 1000;
+		}
+		
 		// Collections.shuffle(p, random);
 		initProbabilities(p, temperature);
 	}
 
 	private void initProbabilities(List<PeerCap> p, double temperature) {
 		for (int i = 0; i < elements; i++) {
-			values[i] = p.get(i).getUtilityFunction();
+			values[i] = p.get(i).getUtilityFunction(cpuIsDominant);
 		}
 		double z = 0;
 		for (double value : values) {

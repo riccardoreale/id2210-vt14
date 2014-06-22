@@ -7,11 +7,11 @@ public class ScenarioLoad extends Scenario {
 
 	private static final int NODES = 50;
 	private static final int NODES_FAULTY = 5;
-	private static final int NODE_MEMORY = 12000;
+	private static final int NODE_MEMORY = 12; // GB
 	private static final int NODE_CPU = 8;
 
 	private static final int JOBS = 1000;
-	private static final int JOB_MEMORY = 2000;
+	private static final int JOB_MEMORY = 2; // GB
 	private static final int JOB_CPU = 2;
 	private static final int JOB_TIME = 10000;
 

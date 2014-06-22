@@ -14,7 +14,7 @@ public class GradientResourceComparator implements Comparator<PeerDescriptor> {
 	private static final boolean USE_GREEDY = true;
 	private static final double TEMPERATURE_GRADIENT = 2;
 
-	private int valueRef;
+	private float valueRef;
 	private SoftMax softMax;
 
 	public GradientResourceComparator(PeerCap ref,
@@ -33,8 +33,8 @@ public class GradientResourceComparator implements Comparator<PeerDescriptor> {
 	 */
 	@Override
 	public int compare(PeerDescriptor arg0, PeerDescriptor arg1) {
-		int value0 = arg0.getPeerCap().getUtilityFunction();
-		int value1 = arg1.getPeerCap().getUtilityFunction();
+		float value0 = arg0.getPeerCap().getUtilityFunction();
+		float value1 = arg1.getPeerCap().getUtilityFunction();
 
 		if (USE_GREEDY) {
 			if (value0 > valueRef

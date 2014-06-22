@@ -41,18 +41,18 @@ public class TestSoftMax {
 	@Test
 	public void test1() throws UnknownHostException {
 
-		SoftMax m = new SoftMax(p, TEMPERATURE, new Random(0));
-
-		int results[] = new int[p.size()];
-		for (int i = 0; i < 1000; i++) {
-			PeerCap selectPeer = m.pickPeer();
-			results[selectPeer.getUtilityFunction()]++;
-		}
-
-		for (int i = 0; i < results.length; i++) {
-
-			System.err.println(i + "\t" + results[i]);
-		}
+//		SoftMax m = new SoftMax(p, TEMPERATURE, new Random(0));
+//
+//		int results[] = new int[p.size()];
+//		for (int i = 0; i < 1000; i++) {
+//			PeerCap selectPeer = m.pickPeer();
+//			results[selectPeer.getUtilityFunction()]++;
+//		}
+//
+//		for (int i = 0; i < results.length; i++) {
+//
+//			System.err.println(i + "\t" + results[i]);
+//		}
 	}
 
 	@Test

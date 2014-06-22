@@ -74,7 +74,7 @@ public final class ResourceManager extends ComponentDefinition {
 	 * if <b>false</b> will use the Cyclon random view to select peer for probes <br>
 	 * if <b>true</b> will use the Gradient view
 	 */
-	public static boolean USE_GRADIENT = true;
+	public static boolean USE_GRADIENT = false;
 
 	/**
 	 * maximum number of HOPS a probe can be propagated
@@ -341,7 +341,7 @@ public final class ResourceManager extends ComponentDefinition {
 			 * based on temperature we can return greedy (best utility) or
 			 * completely random
 			 */
-			SoftMax softMax = new SoftMax(sel, TEMPERATURE_PROBING, random);
+			SoftMax softMax = new SoftMax(sel, TEMPERATURE_PROBING, random, t);
 			return softMax.pickPeer();
 		}
 	}

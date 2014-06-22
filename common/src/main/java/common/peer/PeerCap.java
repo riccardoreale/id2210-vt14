@@ -8,7 +8,8 @@ import se.sics.kompics.address.Address;
  */
 public class PeerCap implements Comparable<PeerCap> {
 
-	private final static boolean USE_QUEUE_LEN = false;
+	private final static boolean USE_QUEUE_LEN = true;
+	private final static boolean USE_MEMORY = false;
 	public final Address address;
 	public final int maxCpu;
 	public final int maxMemory;
@@ -99,14 +100,27 @@ public class PeerCap implements Comparable<PeerCap> {
 	 * comprehensive of the memory because anyhow random walks seems to perform
 	 * better.
 	 * 
-	 * Adding the waiting queue lenght in the utility function only slightly improve
-	 * results since the queued tasks are just placeholder and may be cancelled.
+	 * Adding the waiting queue lenght in the utility function only slightly
+	 * improve results since the queued tasks are just placeholder and may be
+	 * cancelled.
 	 * 
 	 * @return
 	 */
-	public int getUtilityFunction() {
-		int u = getAvailableCpu();
-		if (USE_QUEUE_LEN && u == 0)
+	public float getUtilityFunction() {
+		return getUtilityFunction(true);
+	}
+
+	public float getUtilityFunction(boolean isCpuDominant) {
+//		int u = isCpuDominant ? getAvailableCpu() : getAvailableMemory();
+		float u = 0;
+		if(!USE_MEMORY)
+			u = getAvailableCpu();
+		else
+			u = ((float) getAvailableCpu() / 8) + ((float) (getAvailableMemory() / 1000) / 16);
+		
+//		System.err.println(u);
+		
+		if (USE_QUEUE_LEN)
 			u -= queueLength;
 		return u;
 	}

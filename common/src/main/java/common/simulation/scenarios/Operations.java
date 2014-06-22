@@ -18,7 +18,7 @@ public class Operations {
 		return new Operation3<PeerJoin, Long, Long, Long>() {
 			@Override
 			public PeerJoin generate(Long id, Long numCpus, Long memInMbs) {
-				return new PeerJoin(id, numCpus.intValue(), memInMbs.intValue());
+				return new PeerJoin(id, numCpus.intValue(), memInMbs.intValue() * 1000);
 			}
 		};
 	}
@@ -50,7 +50,7 @@ public class Operations {
 			public ClientRequestResource generate(Long id, Long numCpus,
 					Long memInMbs, Long timeToHoldResourceInMilliSecs) {
 				return new ClientRequestResource(id, 1, numCpus.intValue(),
-						memInMbs.intValue(),
+						memInMbs.intValue() * 1000,
 						timeToHoldResourceInMilliSecs.intValue());
 			}
 		};

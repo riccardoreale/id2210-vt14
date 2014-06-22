@@ -8,7 +8,7 @@ import java.io.InputStreamReader;
 
 public class MainRandomSim {
 
-	private final static boolean USE_ORACLE = true;
+	private final static boolean USE_ORACLE = false;
 	private final static int PROBES = 2;
 
 	private final static int numSeeds = 5;

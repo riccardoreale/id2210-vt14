@@ -8,22 +8,24 @@ public class ScenarioRandom extends Scenario {
 	// public static float SYSTEM_LOAD = 0.8f;
 
 	private static final int NODES_FAULTY = 5;
-	private static final int NODE_MEMORY = 16000;
 
 	private static final boolean USE_RANDOM_CPU = true;
 	private static final int FIXED_NODE_CPU = 8;
 	private static final int MIN_NODE_CPU = 4;
 	private static final int MAX_NODE_CPU = 16;
+	private static final int NODE_MEMORY = 16; // GB
 
 	private static final int JOBS = 500;
-	
-	private static final boolean USE_RANDOM_MEMORY = true;
-	
-	private static final int FIXED_JOB_MEMORY = 1000;
-	private static final int MIN_JOB_MEMORY = 1000;
-	private static final int MAX_JOB_MEMORY = 16000;
+
+
 	private static final int MIN_JOB_CPU = 1;
 	private static final int MAX_JOB_CPU = 8;
+
+	private static final boolean USE_RANDOM_JOB_MEMORY = false;
+	private static final int FIXED_JOB_MEMORY = 1; //GB
+	private static final int MIN_JOB_MEMORY = 1;//GB
+	private static final int MAX_JOB_MEMORY = 8;//GB
+
 	private static final int MIN_JOB_TIME = 1000;
 	private static final int MAX_JOB_TIME = 30000;
 
@@ -51,10 +53,13 @@ public class ScenarioRandom extends Scenario {
 				StochasticProcess process1 = new StochasticProcess() {
 					{
 						eventInterArrivalTime(exponential(500));
-						raise(JOBS, Operations.requestResources(),
+						raise(JOBS,
+								Operations.requestResources(),
 								uniform(0, Integer.MAX_VALUE),
 								uniform(MIN_JOB_CPU, MAX_JOB_CPU),
-								USE_RANDOM_MEMORY ? uniform(MIN_JOB_MEMORY, MAX_JOB_MEMORY) : constant(FIXED_JOB_MEMORY),
+								USE_RANDOM_JOB_MEMORY ? uniform(MIN_JOB_MEMORY,
+										MAX_JOB_MEMORY)
+										: constant(FIXED_JOB_MEMORY),
 								uniform(MIN_JOB_TIME, MAX_JOB_TIME) // 1 minute
 						);
 					}
