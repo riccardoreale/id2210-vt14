@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Labels</key>
+	<string>load (%)
+avg queue (ms)
+99th queue (ms)
+omniscent
+Omniscent
+Base Sparrow
+Base Sparrow
+avg_rand vs peers
+Random Walk
+Greedy Search
+Greedy Search
+avg_grad vs peers
+Gradient Search
+</string>
+	<key>Text</key>
+	<string></string>
+</dict>
+</plist>

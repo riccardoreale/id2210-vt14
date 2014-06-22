@@ -104,14 +104,17 @@ Where $CPU_p(n)$ means the available CPU of the node \textit{n} according to the
 To evaluate our improvement over Sparrow we selected two main scenarios:
 \begin{itemize}
 
-\item A load scenario where 50 homogeneous nodes executes 1000 tasks, each requesting 2 cpus and 2Gb of memory and a fixed execution time of 10 seconds.
-The load simply determines the inter-arrival time of the tasks, based on the number of total cpu in the DataCenter (the dominant resource) and the processing time.
+\item A load scenario where 50 homogeneous nodes (8 cpus and 16GB memory) executes 1000 tasks, each requesting 2 cpus and 2Gb of memory and a fixed execution time of 10 seconds. The load simply determines the inter-arrival time of the tasks, based on the number of total cpu in the DataCenter (the dominant resource) and the processing time.
 
-\item A random scenario instead consists in using  a variable number of heterogeneous nodes, executing 500 tasks with different requirements in terms of cpu and time, which arrive at a rate of half second each.
+\item A random scenario (\textbf{A}) which consists in using  a variable number of homogeneous nodes (8 cpus and 16GB memory), executing 500 tasks with different requirements in terms of only cpu (between 1 and 8) and time (between 1 and 30 seconds), which arrive at a rate of half second between each.
+
+\item A random scenario (\textbf{B}) similar to A but tasks have random values of both cpu and memory (between 1 and 8 GB). For this particular scenario we changed the utility function to include also the memory.
+
+\item A random scenario (\textbf{C}) similar to A but with heterogeneous nodes resources.
 
 \end{itemize}
 
-Both scenarios are generated using the CPU as dominant resource, to allow us to easily control the load and greedy ranking functions, both for Greedy Search and Gradient.
+Except for scenario \textit{B}, all of them are generated using the CPU as dominant resource, for easily controlling the load and the greedy ranking functions, both for Greedy Search and Gradient.
 
 We added and evaluated the different algorithm improvements adding them to Sparrow base one to obtain three different configurations: 
 \begin{enumerate}
@@ -151,10 +154,33 @@ The Probe Propagation instead decreases dramatically the 99th percentile queue t
 
 The Gradient Ranking function is not too useful when the load increases too much since the use of Late Binding provides a poor correlation between waiting queue length and actual load, since any of the place-holder could get a Cancel on confirmation request.
 
+\subsection{Results in Random Scenarios}
 
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.45]{figures/randomA}
+\caption{Random Scenario A}
+\label{fig:comparison}
+\end{center}
+\end{figure}
 
-\subsection{Results in Random Scenario}
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.45]{figures/randomB}
+\caption{Random Scenario B}
+\label{fig:comparison}
+\end{center}
+\end{figure}
 
-Finally we show the results in the Random Scenario
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.45]{figures/randomC}
+\caption{Random Scenario C}
+\label{fig:comparison}
+\end{center}
+\end{figure}
+
+The Random Scenarios show a similar trend with the load scenario, except for the scenario C, with heterogeneous nodes, where Greedy Search helps to find faster available resources.
+This is therefore the only case, in our implementation, where a Greedy Search or Gradient gives better result. In case of node heterogeneity, the random walks are sufficient to balance the load among all nodes
 
 \end{document}
