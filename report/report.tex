@@ -302,11 +302,9 @@
   the 99th percentile when there are enough resources available (more than
   25 nodes).
  
-  Therefore, in all scenarios analysed for our implementation, Random
-  Walks, and Greedy Searches gives better result than the base Sparrow
-  algorithm.
-
-  There are two main differences between using Random Walks and Greedy
+  All scenarios analysed for our implementation show that Random Walks and
+  Greedy Searches behave better than the base Sparrow algorithm.  There
+  are two main differences between using Random Walks and Greedy
   Searches:
   \begin{itemize}
     \item The cost of increasing the rate of Cyclon, aimed at providing
@@ -316,5 +314,10 @@
       into account more resources besides CPU and memory, possibly
       also improving the queue-time estimation when using Late Binding.
   \end{itemize}
+
+  In conclusion, we would expect better results in a Gradient Search for a
+  deployment composed by homogeneous nodes. As a drawback we would need
+  a complex ranking function and to increase the message frequency for
+  Cyclon
 
 \end{document}
