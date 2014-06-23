@@ -28,54 +28,93 @@
 \section{Architecture design}
 
   \subsection{Base Sparrow}
-  
-  The base system was implemented following the suggested design with the addition of 
-  two main components initialized by each simulated Peer:
+
+  The base system was implemented following the suggested design with the
+  addition of two main components initialized by each simulated Peer:
   \begin{enumerate}
 
-  \item A RmWorker component, which abstracts the Resource Manager from task queue
-  handling and execution.
-  
-  \item A FailureDetector component, which detects not responding nodes that are subscribed to be
-  monitored. If a monitored node doesn't ACK to alive pings after a certain timeout (3 seconds), the Detector will assume the node to have crashed. For simplicity we assume that on the DataCenter there are no network failures, so if a node is detected as dead, it will stay so.
-  
+  \item A \ResourceManager component, which abstracts the task assignment
+    operations on the network, implementing the selection and the
+    signaling through the network.
+
+  \item A \RmWorker component, which implements a FIFO queue for the task and
+    handles the simulated execution logic.
+
+  \item A \component{FailureDetector} component, which detects not
+    responding nodes that are subscribed to be monitored. If a monitored
+    node doesn't ACK to alive pings after a certain timeout (3 seconds),
+    the Detector will assume the node to have crashed. For simplicity we
+    assume that on the DataCenter there are no network failures, so if a
+    node is detected as dead, it will stay so.
+
   \end{enumerate}
-  
-   The required number of CPUs and amount of memory for the execution of a
-  task will be referred as \treq. \Treq are allocated by the node executing the
-  task (\exc) on behalf of the assigner (\tmast). The allocation time is
-  considered as the payload of a task assignment and we assume is not known a priori by a ResourceManager. Therefore the allocation time is used only to simulate the task execution, which consists in allocating the resources (according to \treq), waiting the
+
+  The required number of CPUs and amount of memory for the execution of a
+  task will be referred as \treq. \Treq are allocated by the node
+  executing the task (\exc) on behalf of the assigner (\tmast). The
+  allocation time is considered as the payload of a task assignment and
+  we assume is not known a priori by a Resource Manager. Therefore the
+  allocation time is used only to simulate the task execution, which
+  consists in allocating the resources (according to \treq), waiting the
   specified amount of time, and releasing the resources.
 
-  We implemented two different behavioral modes. The first implements
-  the best scheduling logic illustrated by the Sparrow paper (Batch + Late Binding),
-  henceforth referred as \us, while the second implements
-  an omniscient scheduler for sake of comparison with an optimal assignment
-  strategy, henceforth referred as \omni. This is obtained directly in the DataCenter scheduler, which, for each task, will calculate the first node to have the requested resources available, and assign it to be executed directly on that node as soon as possible. This operation is, of course, unrealistic since it make use of both updated information about the task queue on each node, and the allocation time of each task.
-  
-  The workflow for \us algorithm is the follow:
+  We implemented two different behavioral modes. The firdt implements the
+  best scheduling logic illustrated by the Sparrow paper (Batch + Late
+  Binding), henceforth referred as \us, while the second implements an
+  omniscient scheduler for sake of comparison with an optimal assignment
+  strategy, henceforth referred as \omni. This is obtained directly in the
+  DataCenter scheduler, which, for each task, will calculate the first
+  node to have the requested resources available, and assign it to be
+  executed directly on that node as soon as possible. This operation is,
+  of course, unrealistic since it make use of both updated information
+  about the task queue on each node, and the allocation time of each task.
+
+  The work-flow for \us algorithm is the follow:
+
   \begin{enumerate}
-  
-  \item The task gets issued by the \dc and propagated
-        to a \tmast, which is selected as the closest to the task
-        identifier within a consistent hash table;
 
- \item The \tmast probes a number of his neighbours indicating the \treq.
- 
- \item The nodes receiving the probe forwards the request to their RmWorker, which put a place-holder in their own waiting queue, and then signal the \tmast that the probe was received.
- 
- \item Every time the RmWorker receives a probe, it selects the first task in the waiting queue (which is FIFO) and, if it has enough resources available to execute it, it temporary allocates the \treq resources and request its ResourceManager to ask for a confirmation from the \tmast.
- 
- \item When a \tmast receives a request for confirmation from an \exc, it send an Assignment to him with the oldest not-yet-assigned task. The assigned task may differ from the task request sent by the probe, as long as it requires less or equal \treq. In case there are no tasks that can be assigned to the available \exc, it will respond with a Cancel.
- 
- \item If an \exc waiting for a confirmation receives an Assignment, its RmWorker de-allocates the temporary blocked resources, and immediately allocates the assigned task and executes it. This is important since the place-holder task may different from the actually assigned one.
+    \item The task gets issued by the \dc and propagated to a \tmast,
+      which is selected as the closest to the task identifier within a
+      consistent hash table;
 
- \item If an \exc waiting for a confirmation receives a Cancel instead, its RmWorker simply de-allocates the temporary blocked resources, and executes 4.
- 
- \item When a \exc RmWorker completes a task execution, it releases the blocked resources, notifies its ResourceManager and executes 4.
- 
+    \item The \tmast selects a number of his neighbours as candidates for
+      the role of \exc. The task is kept in hold while the neighbours get
+      signaled with a probe. The probe indicates the \treq for the task.
+
+    \item When the \ResourceManager of a node receives a probe, it
+      forwards the request to the \RmWorker component, which put a
+      place-holder in their own waiting queue. The operation achievement
+      is notified to the \tmast.
+
+    \item When \RmWorker enqueues a new task place-holder the next task
+      the waiting queue is considered for execution. If enough resources
+      are available, the \treq resources are pre-allocated, and a
+      confirmation request is forwarded through the \ResourceManager
+      component, to the \tmast.
+
+    \item When a \tmast receives a request for confirmation from an \exc,
+      it send an assignment to him with the oldest not-yet-assigned task.
+      The assigned task may differ from the one originally referred by the
+      probe, as long as characterized by smaller or equal \treq. If
+      no tasks can be assigned, either because there's no task in hold, or
+      because they exceed the \treq of the original one, the \exc is
+      notified with a cancellation signal.
+
+    \item If an \exc waiting for a confirmation receives an assignment,
+      its \RmWorker updates executes the task, possibly freeing part of
+      the pre-allocated resources if the \treq declared in the
+      place-holder differ from the actual task.
+
+    \item If an \exc waiting for a confirmation receives a cancellation
+      instead, its \RmWorker component simply de-allocates the temporary
+      blocked resources, and executes 4.
+
+    \item When the \RmWorker of the \exc completes a task execution, it
+      releases the blocked resources, notifies its \ResourceManager and
+      behaves as in point 4.
+
   \end{enumerate}
- 
+
  Concerning Fault Tolerance, the ResourceManager subscribes to its FailureDetector each node it probes and check that every probe is received. If a node is detected as dead, the \tmast will restart the probe process for each task that was running on the dead node. Similarly the RmWorker of an \exc subscribes each \tmast. If a \tmast is detected as dead, the RmWorker will cancel all his tasks.
   
 
