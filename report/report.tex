@@ -58,7 +58,7 @@
   consists in allocating the resources (according to \treq), waiting the
   specified amount of time, and releasing the resources.
 
-  We implemented two different behavioral modes. The firdt implements the
+  We implemented two different behavioral modes. The first implements the
   best scheduling logic illustrated by the Sparrow paper (Batch + Late
   Binding), henceforth referred as \us, while the second implements an
   omniscient scheduler for sake of comparison with an optimal assignment
@@ -303,21 +303,18 @@
   25 nodes).
  
   All scenarios analysed for our implementation show that Random Walks and
-  Greedy Searches behave better than the base Sparrow algorithm.  There
-  are two main differences between using Random Walks and Greedy
-  Searches:
+  Greedy Searches behave better than the base Sparrow algorithm. 
+  
+  In conclusion, Gradient Search performs slightly better than Random Walks for a deployment composed by homogeneous nodes, but the drawbacks are:
   \begin{itemize}
-    \item The cost of increasing the rate of Cyclon, aimed at providing
-      fresh samples of the utility function;
+  
+    \item an higher message cost due to increasing the rate of Cyclon, aimed at providing  fresh samples of the utility function;
 
-    \item The development of a more complex utility function which takes
+    \item the development of a more complex utility function which takes
       into account more resources besides CPU and memory, possibly
       also improving the queue-time estimation when using Late Binding.
   \end{itemize}
 
-  In conclusion, we would expect better results in a Gradient Search for a
-  deployment composed by homogeneous nodes. As a drawback we would need
-  a complex ranking function and to increase the message frequency for
-  Cyclon
+  
 
 \end{document}
