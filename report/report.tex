@@ -215,85 +215,85 @@
 
 \subsection{Results in Load Scenario}
 
-Figure~\ref{fig:probes} shows the base implementation of Sparrow in the
-Load scenario, for different number of probes used. The results are
-consistent with the one presented in the Sparrow work.
+  Figure~\ref{fig:probes} shows the base implementation of Sparrow in the
+  Load scenario, for different number of probes used. The results are
+  consistent with the one presented in the Sparrow work.
 
-Figure~\ref{fig:comparison} shows the results comparison between the Base
-Sparrow algorithm (2 probes) and the improved configurations.
+  Figure~\ref{fig:comparison} shows the results comparison between the Base
+  Sparrow algorithm (2 probes) and the improved configurations.
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=.5\textwidth]{figures/probes_new}
-\caption{Base Sparrow algorithm using different load and number of probes}
-\label{fig:probes}
-\end{center}
-\end{figure}
+  \begin{figure}
+  \begin{center}
+  \includegraphics[width=.5\textwidth]{figures/probes_new}
+  \caption{Base Sparrow algorithm using different load and number of probes}
+  \label{fig:probes}
+  \end{center}
+  \end{figure}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=.5\textwidth]{figures/comparison_new}
-\caption{Comparison between Base Sparrow Algorithm and its enhancements}
-\label{fig:comparison}
-\end{center}
-\end{figure}
+  \begin{figure}
+  \begin{center}
+  \includegraphics[width=.5\textwidth]{figures/comparison_new}
+  \caption{Comparison between Base Sparrow Algorithm and its enhancements}
+  \label{fig:comparison}
+  \end{center}
+  \end{figure}
 
-The comparison shows how the Self Assignment decreases the average queue
-time, since in most cases the task is not propagated at all but
-immediately executed on the \tmast.
+  The comparison shows how the Self Assignment decreases the average queue
+  time, since in most cases the task is not propagated at all but
+  immediately executed on the \tmast.
 
-The Probe Propagation instead decreases dramatically the 99th percentile
-queue time, especially with loads between 50\% and 85\%, and similarly on
-all the configurations. Above 85\%, all configurations experience an
-increase in both average and 99th percentile. 
+  The Probe Propagation instead decreases dramatically the 99th percentile
+  queue time, especially with loads between 50\% and 85\%, and similarly on
+  all the configurations. Above 85\%, all configurations experience an
+  increase in both average and 99th percentile. 
 
-Neither average nor 99th percentile obtain a significant improvement by
-using a Greedy Search on top of Random View.
+  Neither average nor 99th percentile obtain a significant improvement by
+  using a Greedy Search on top of Random View.
 
-Finally the last configuration, using Gradient, performs slightly worse
-than the others. Although we did not verify this dynamics, our hypothesis
-is that the samples provided by Cyclon carry stale information about the
-neighbour resources. This results in the nodes on top of the gradient to
-receive an higher amount of probes. 
+  Finally the last configuration, using Gradient, performs slightly worse
+  than the others. Although we did not verify this dynamics, our hypothesis
+  is that the samples provided by Cyclon carry stale information about the
+  neighbour resources. This results in the nodes on top of the gradient to
+  receive an higher amount of probes. 
 
-The Gradient Ranking function seems to provide a very little improvement
-when the load increases too much. Intuitively this is because of the power
-of two choices, at least half of the of the place-holders could get a
-Cancel on confirmation request. Moreover, the use of the Late Binding
-technique further reduces the correlation between the length of the
-waiting queue and actual load.
+  The Gradient Ranking function seems to provide a very little improvement
+  when the load increases too much. Intuitively this is because of the power
+  of two choices, at least half of the of the place-holders could get a
+  Cancel on confirmation request. Moreover, the use of the Late Binding
+  technique further reduces the correlation between the length of the
+  waiting queue and actual load.
 
 \subsection{Results in Random Scenarios}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=.5\textwidth]{figures/randomA}
-\caption{Random Scenario A}
-\label{fig:comparison}
-\end{center}
-\end{figure}
+  \begin{figure}
+  \begin{center}
+  \includegraphics[width=.5\textwidth]{figures/randomA}
+  \caption{Random Scenario A}
+  \label{fig:comparison}
+  \end{center}
+  \end{figure}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=.5\textwidth]{figures/randomB}
-\caption{Random Scenario B}
-\label{fig:comparison}
-\end{center}
-\end{figure}
+  \begin{figure}
+  \begin{center}
+  \includegraphics[width=.5\textwidth]{figures/randomB}
+  \caption{Random Scenario B}
+  \label{fig:comparison}
+  \end{center}
+  \end{figure}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=.5\textwidth]{figures/randomC}
-\caption{Random Scenario C}
-\label{fig:comparison}
-\end{center}
-\end{figure}
+  \begin{figure}
+  \begin{center}
+  \includegraphics[width=.5\textwidth]{figures/randomC}
+  \caption{Random Scenario C}
+  \label{fig:comparison}
+  \end{center}
+  \end{figure}
 
-The Random Scenarios show a similar trend with the load scenario, except
-for the scenario C, with heterogeneous nodes, where Greedy Search helps to
-decrease the queue time in the worst cases.  This is therefore the only
-case, in our implementation, where a Greedy Search or Gradient gives
-slightly better result. In case of node heterogeneity, the random walks
-are sufficient to balance the load among all nodes
+  The Random Scenarios show a similar trend with the load scenario, except
+  for the scenario C, with heterogeneous nodes, where Greedy Search helps to
+  decrease the queue time in the worst cases.  This is therefore the only
+  case, in our implementation, where a Greedy Search or Gradient gives
+  slightly better result. In case of node heterogeneity, the random walks
+  are sufficient to balance the load among all nodes
 
 \end{document}
