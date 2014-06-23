@@ -163,31 +163,51 @@
 
 \section{Experimental evaluation}\label{sec:Evaluation}
 
-\subsection{Setup}
-To evaluate our improvement over Sparrow we selected two main scenarios:
-\begin{itemize}
+  \subsection{Setup}
+  To evaluate our improvement over Sparrow we selected two main scenarios:
+  \begin{itemize}
 
-\item A load scenario where 50 homogeneous nodes (8 cpus and 16GB memory) executes 1000 tasks, each requesting 2 cpus and 2Gb of memory and a fixed execution time of 10 seconds. The load simply determines the inter-arrival time of the tasks, based on the number of total cpu in the DataCenter (the dominant resource) and the processing time.
+    \item A load scenario where 50 homogeneous nodes (8 CPUs and 16 GB
+      memory) executes 1000 tasks, each requesting 2 CPUs and 2 GB of
+      memory and a fixed execution time of 10 seconds. The load simply
+      determines the inter-arrival time of the tasks, based on the number
+      of total CPU in the \dc (the dominant resource) and the processing
+      time.
 
-\item A random scenario (\textbf{A}) which consists in using  a variable number of homogeneous nodes (8 cpus and 16GB memory), executing 500 tasks with different requirements in terms of only cpu (between 1 and 8) and time (between 1 and 30 seconds), which arrive at a rate of half second between each.
+    \item A random scenario (\scenario{A}) which consists in using  a
+      variable number of homogeneous nodes (8 cpus and 16GB memory),
+      executing 500 tasks with different requirements in terms of only cpu
+      (between 1 and 8) and time (between 1 and 30 seconds), which arrive
+      at a rate of half second between each.
 
-\item A random scenario (\textbf{B}) similar to A but tasks have random values of both cpu and memory (between 1 and 8 GB). For this particular scenario we changed the utility function to include also the memory.
+    \item A random scenario (\scenario{B}) similar to A but tasks have
+      random values of both cpu and memory (between 1 and 8 GB). For this
+      particular scenario we changed the utility function to include also
+      the memory.
 
-\item A random scenario (\textbf{C}) similar to A but with heterogeneous nodes resources.
+    \item A random scenario (\scenario{C}) similar to A but with
+      heterogeneous nodes resources.
 
-\end{itemize}
+  \end{itemize}
 
-Except for scenario \textit{B}, all of them are generated using the CPU as dominant resource, for easily controlling the load and the greedy ranking functions, both for Greedy Search and Gradient.
+  Except for scenario \scenario{B}, all of them are generated using the CPU
+  as dominant resource, for easily controlling the load and the greedy
+  ranking functions, both for Greedy Search and Gradient.
 
-We added and evaluated the different algorithm improvements adding them to Sparrow base one to obtain three different configurations: 
-\begin{enumerate}
-\item \textbf{Random Walk} uses Self Assignment and Probe Propagation, with random Next Hop Selection (Temperature set to 100), giving us Random Walks for each probe. 
-\item \textbf{Greedy Search} adds Greedy Next Hop Selection.
-\item \textbf{Gradient Search} uses Greedy Next Hop Selection on top of Gradient View.
-\end{enumerate}
+  We added and evaluated the different algorithm improvements adding them
+  to Sparrow base one to obtain three different configurations: 
+  \begin{enumerate}
+    \item \textbf{Random Walk} uses Self Assignment and Probe Propagation,
+      with random Next Hop Selection (Temperature set to 100), giving us
+      Random Walks for each probe. 
+    \item \textbf{Greedy Search} adds Greedy Next Hop Selection.
+    \item \textbf{Gradient Search} uses Greedy Next Hop Selection on top
+      of Gradient View.
+  \end{enumerate}
 
-As main measures we use, as suggested, the average queue time of each task and the 99th percentile.
-Each result is average over 5 runs with different seed.
+  As main measures we use, as suggested, the average queue time of each
+  task and the 99th percentile.  Each result is average over 5 runs with
+  different seed.
 
 \subsection{Results in Load Scenario}
 
