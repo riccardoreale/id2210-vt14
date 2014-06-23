@@ -123,22 +123,39 @@
   as dead, the \RmWorker will cancel all his tasks.
 
   \subsection{Improved Sparrow}
-  The improved version of Sparrow consists in four main algorithm modifications:
-   \begin{enumerate}
 
-  \item \textbf{Self Assignment }- A ResourceManager receiving a Task from the DataCenter will directly execute it if its RmWorker has enough resources immediately available.
+  The improved version of Sparrow consists in four main algorithm
+  modifications:
   
-  \item \textbf{Probe Propagation} - A ResourceManager receiving a probe can decide to deposit it on its RmWorker or propagating it to another neighbour.  The probe will be locally deposited if its task can be executed immediately or it has been propagated more than a fixed number of time (usually 5).
-  
-   \item \textbf{Next Hop Selection} - When probing or propagating a probe, the peer selected from the neighbours can be chosen randomly (Random Walks) or in a greedy way (Greedy Search), based on the current knowledge of his resources availability provided by Cyclon We used a SoftMax algorithm with configurable temperature.
-  
-  \item \textbf{Gradient View} - Instead of using the the neighbors view provided by Cyclon, the RmWorker can use the view provided by Gradient, implemented using a Gradient Ranking function on top of TMan, based on the available node resources. We used a greedy ranking function, while the utility function is very basic and defined as:
-\begin{equation}
- U_p(n) = CPU_p(n) - Queue_p(n)
-\end{equation}
-Where $CPU_p(n)$ means the available CPU of the node \textit{n} according to the value cached by node\textit{ p}, and $Queue_p(n)$ the length of its waiting queue.
-   The reason of this choice will be clarified in the Evaluation.
-  
+  \begin{enumerate}
+
+    \item \textbf{Self Assignment} - A ResourceManager receiving a Task
+      from the DataCenter will directly execute it if its RmWorker has
+      enough resources immediately available.
+
+    \item \textbf{Probe Propagation} - A ResourceManager receiving a probe
+      can decide to deposit it on its RmWorker or propagating it to another
+      neighbour.  The probe will be locally deposited if its task can be
+      executed immediately or it has been propagated more than a fixed
+      number of time (usually 5).
+
+    \item \textbf{Next Hop Selection} - When probing or propagating a
+      probe, the peer selected from the neighbours can be chosen randomly
+      (Random Walks) or in a greedy way (Greedy Search), based on the
+      current knowledge of his resources availability provided by Cyclon
+      We used a SoftMax algorithm with configurable temperature.
+
+    \item \textbf{Gradient View} - Instead of using the the neighbors
+      view provided by Cyclon, the RmWorker can use the view provided by
+      Gradient, implemented using a Gradient Ranking function on top of
+      TMan, based on the available node resources. We used a greedy
+      ranking function, while the utility function is very basic and
+      defined as: \begin{equation} U_p(n) = CPU_p(n) - Queue_p(n)
+      \end{equation} Where $CPU_p(n)$ means the available CPU of the node
+      \textit{n} according to the value cached by node\textit{ p}, and
+      $Queue_p(n)$ the length of its waiting queue.  The reason of this
+      choice will be clarified in the Evaluation.
+
   \end{enumerate}
 
 \section{Experimental evaluation}
