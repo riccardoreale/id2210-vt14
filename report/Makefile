@@ -14,7 +14,7 @@ all: $(PDF)
 clean:
 	rm -rf $(PDF) $(OUTDIR)
 
-%.pdf : %.tex $(OUTDIR)
+%.pdf : %.tex $(OUTDIR) $(wildcard settings/*)
 	$(LATEX) $(OPTS) $< &&\
 	$(LATEX) $(OPTS) $< >/dev/null &&\
 	$(LATEX) $(OPTS) $< >/dev/null
