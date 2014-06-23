@@ -69,7 +69,7 @@
   of course, unrealistic since it make use of both updated information
   about the task queue on each node, and the allocation time of each task.
 
-  The work-flow for \us algorithm is the follow:
+  The work-flow for \us algorithm is the following:
 
   \begin{enumerate}
 
@@ -183,7 +183,7 @@
     \item A random scenario (\scenario{B}) similar to \scenario{A} but
       tasks have random values of both CPU and memory (between 1 and 8
       GB). For this particular scenario we changed the utility function to
-      include also the memory.
+      include also the available memory.
 
     \item A random scenario (\scenario{C}) similar to \scenario{A} but
       with heterogeneous nodes resources.
@@ -194,7 +194,7 @@
   CPU as dominant resource in order to control easily the load and the
   greedy ranking functions, both for Greedy Search and Gradient.
 
-  We improved the basic Sparrow algorithm with different variants, in
+  We improved the Sparrow algorithm with different variants, in
   order to obtain three different configurations:
   \begin{enumerate}
 
@@ -289,11 +289,31 @@
   \end{center}
   \end{figure}
 
-  The Random Scenarios show a similar trend with the load scenario, except
-  for the scenario C, with heterogeneous nodes, where Greedy Search helps to
-  decrease the queue time in the worst cases.  This is therefore the only
-  case, in our implementation, where a Greedy Search or Gradient gives
-  slightly better result. In case of node heterogeneity, the random walks
-  are sufficient to balance the load among all nodes
+  %The Random Scenarios show a similar trend with the load scenario, except
+  %for the scenario C, with heterogeneous nodes, where Greedy Search helps to
+  %decrease the queue time in the worst cases.  This is therefore the only
+  %case, in our implementation, where a Greedy Search or Gradient gives
+  %slightly better result. In case of node heterogeneity, the random walks
+  %are sufficient to balance the load among all nodes
+
+  The Random Scenarios show similar trends with the load scenario, with
+  Greedy Search slightly decreasing the Random Walk performances. Only in
+  the heterogeneous nodes scenario C the Gradient Search helps decrease
+  the 99th percentile when there are enough resources available (more than
+  25 nodes).
+ 
+  Therefore, in all scenarios analysed for our implementation, Random
+  Walks, and Greedy Searches gives better result than the base Sparrow
+  algorithm.
+
+  There are two main differences between using Random Walks and Greedy Searches:
+  \begin{itemize}
+    \item The cost of increasing the rate of Cyclon, aimed at providing
+      fresh samples of the utility function;
+
+    \item The development of a more complex utility function which takes
+      into account more resources besides CPU and memory, possibly
+      also improving the queue-time estimation when using Late Binding.
+  \end{itemize}
 
 \end{document}
