@@ -115,12 +115,12 @@
 
   \end{enumerate}
 
-  Concerning Fault Tolerance, the ResourceManager subscribes to its
-  \FailureDetector each node it probes and check that every probe is
-  received. If a node is detected as dead, the \tmast will restart the
-  probe process for each task that was running on the dead node. Similarly
-  the \RmWorker of an \exc subscribes each \tmast. If a \tmast is detected
-  as dead, the \RmWorker will cancel all his tasks.
+  Concerning fault tolerance, the ResourceManager subscribes to its
+  \FailureDetector each node it probes, and waits to be notified about
+  reception of each probe. If a node is detected as dead, the \tmast will restart the
+  probing process for each task running on it. Similarly the \RmWorker of
+  an \exc subscribes failure detector for the \tmast. If a \tmast is
+  detected as dead, the \RmWorker will cancel all his tasks.
 
   \subsection{Improved Sparrow}
 
