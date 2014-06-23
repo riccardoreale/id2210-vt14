@@ -40,7 +40,7 @@
   \item A \RmWorker component, which implements a FIFO queue for the task and
     handles the simulated execution logic.
 
-  \item A \component{FailureDetector} component, which detects not
+  \item A \FailureDetector component, which detects not
     responding nodes that are subscribed to be monitored. If a monitored
     node doesn't answer to pings after a certain timeout (3 seconds),
     the Detector will assume the node to have crashed. For simplicity we
@@ -115,8 +115,12 @@
 
   \end{enumerate}
 
- Concerning Fault Tolerance, the ResourceManager subscribes to its FailureDetector each node it probes and check that every probe is received. If a node is detected as dead, the \tmast will restart the probe process for each task that was running on the dead node. Similarly the RmWorker of an \exc subscribes each \tmast. If a \tmast is detected as dead, the RmWorker will cancel all his tasks.
-  
+  Concerning Fault Tolerance, the ResourceManager subscribes to its
+  \FailureDetector each node it probes and check that every probe is
+  received. If a node is detected as dead, the \tmast will restart the
+  probe process for each task that was running on the dead node. Similarly
+  the \RmWorker of an \exc subscribes each \tmast. If a \tmast is detected
+  as dead, the \RmWorker will cancel all his tasks.
 
   \subsection{Improved Sparrow}
   The improved version of Sparrow consists in four main algorithm modifications:
