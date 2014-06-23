@@ -30,7 +30,7 @@
   \subsection{Base Sparrow}
 
   The base system was implemented following the suggested design with the
-  addition of two main components initialized by each simulated Peer:
+  addition of two main components. Each simulated Peer is composed by:
   \begin{enumerate}
 
   \item A \ResourceManager component, which abstracts the task assignment
@@ -42,9 +42,9 @@
 
   \item A \component{FailureDetector} component, which detects not
     responding nodes that are subscribed to be monitored. If a monitored
-    node doesn't ACK to alive pings after a certain timeout (3 seconds),
+    node doesn't answer to pings after a certain timeout (3 seconds),
     the Detector will assume the node to have crashed. For simplicity we
-    assume that on the DataCenter there are no network failures, so if a
+    assume that there are no network failures in the Data Center, so if a
     node is detected as dead, it will stay so.
 
   \end{enumerate}
@@ -63,7 +63,7 @@
   Binding), henceforth referred as \us, while the second implements an
   omniscient scheduler for sake of comparison with an optimal assignment
   strategy, henceforth referred as \omni. This is obtained directly in the
-  DataCenter scheduler, which, for each task, will calculate the first
+  \dc scheduler, which, for each task, will calculate the first
   node to have the requested resources available, and assign it to be
   executed directly on that node as soon as possible. This operation is,
   of course, unrealistic since it make use of both updated information
